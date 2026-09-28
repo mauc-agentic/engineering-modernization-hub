@@ -5,6 +5,7 @@ negocio (DOCS/03-arquitectura.md §3.6). La ejecución corre en segundo plano
 from __future__ import annotations
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from emh.api.schemas import AprobacionEntrada, ErrorRespuesta, SolicitudEntrada, SolicitudRespuesta
 from emh.bootstrap import Aplicacion
@@ -18,6 +19,14 @@ def _error(codigo: str, mensaje: str, run_id: int | None = None) -> dict:
 
 def crear_app(aplicacion: Aplicacion) -> FastAPI:
     app = FastAPI(title="Engineering Modernization Hub", version="0.1.0")
+
+    # CORS abierto a propósito para el dashboard de demo (frontend/index.html,
+    # servido como archivo local o localhost): no hay autenticación real en
+    # F1 (RN-14) y el Hub no se expone públicamente en esta configuración.
+    # NO usar así en un despliegue real (ver DOCS/07-seguridad.md).
+    app.add_middleware(
+        CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
+    )
     app.state.aplicacion = aplicacion
 
     @app.post("/solicitudes", response_model=SolicitudRespuesta, status_code=201)

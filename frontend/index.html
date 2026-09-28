@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Engineering Modernization Hub</title>
+<style>
+  :root {
+    --ink: #14241D;
+    --muted: #4A5750;
+    --bg: #FAFAF7;
+    --card: #FFFFFF;
+    --line: #DCE6E1;
+    --accent: #2F7D6B;
+    --accent-dark: #122019;
+    --danger: #B5482E;
+    --ok: #2F7D6B;
+    --warn: #C9A227;
+    --card-alt: #EEF3F0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+  }
+  code, .mono { font-family: "SF Mono", Menlo, Consolas, monospace; }
+  header {
+    background: var(--accent-dark); color: #FAFAF7; padding: 20px 32px;
+    display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  }
+  header h1 { font-size: 20px; margin: 0; font-weight: 600; }
+  header .sub { font-size: 13px; color: #8FB3A9; }
+  header .conn { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #666; }
+  .dot.ok { background: #5FBFA3; }
+  .dot.bad { background: var(--danger); }
+  header input {
+    background: #1B332B; border: 1px solid #2D5C4D; color: #FAFAF7;
+    padding: 6px 10px; border-radius: 8px; font-size: 13px; width: 220px;
+  }
+  main { display: grid; grid-template-columns: 380px 1fr; gap: 24px; padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 22px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin: 0 0 16px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
+  input, textarea, select {
+    width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 14px; font-family: inherit; color: var(--ink);
+  }
+  textarea { resize: vertical; min-height: 50px; }
+  button {
+    cursor: pointer; border: none; border-radius: 8px; padding: 10px 16px;
+    font-size: 14px; font-weight: 600; font-family: inherit;
+  }
+  button.primary { background: var(--accent); color: #fff; }
+  button.primary:hover { background: #24614F; }
+  button.danger { background: var(--danger); color: #fff; }
+  button.danger:hover { background: #8F3A24; }
+  button.ghost { background: var(--card-alt); color: var(--ink); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .row { display: flex; gap: 10px; margin-top: 14px; }
+  .badge {
+    display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px;
+    font-weight: 600; letter-spacing: 0.02em;
+  }
+  .badge.info { background: #E4ECEA; color: var(--accent); }
+  .badge.ok { background: #DCF3EA; color: #1F5C4C; }
+  .badge.warn { background: #FBF0D6; color: #8A6B10; }
+  .badge.bad { background: #FBE4DD; color: var(--danger); }
+  .kv { display: grid; grid-template-columns: 160px 1fr; gap: 6px 12px; font-size: 14px; }
+  .kv div:nth-child(odd) { color: var(--muted); }
+  .empty { color: var(--muted); font-size: 14px; font-style: italic; }
+  ul.plain { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6; }
+  .verif { border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 10px; background: var(--card-alt); }
+  .verif.ok { border-color: #BFE3D5; }
+  .verif.bad { border-color: #F0C9BC; }
+  .verif pre { white-space: pre-wrap; font-size: 12px; margin: 8px 0 0; max-height: 160px; overflow: auto; background: #14241D0d; padding: 8px; border-radius: 6px; }
+  .evento { border-left: 4px solid var(--danger); padding: 10px 14px; margin-bottom: 8px; background: #FBE4DD33; font-size: 13px; }
+  .fuente-cita { font-size: 12px; color: var(--accent); margin-top: 4px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--accent-dark); color: #fff;
+    padding: 12px 18px; border-radius: 10px; font-size: 13px; display: none; max-width: 360px;
+  }
+  .toast.show { display: block; }
+  .toast.err { background: var(--danger); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Engineering Modernization Hub</h1>
+    <div class="sub">Dashboard de demo — habla directo con la API real (F1)</div>
+  </div>
+  <div class="conn">
+    <span class="dot" id="dot"></span>
+    <span id="conn-text">sin conexión</span>
+    <input id="api-base" value="http://localhost:8000" spellcheck="false">
+  </div>
+</header>
+
+<main>
+  <!-- Columna izquierda: registrar solicitud -->
+  <div>
+    <div class="card">
+      <h2>1 · Registrar solicitud</h2>
+      <label>Repositorio (HTTPS)</label>
+      <input id="f-repo" value="https://github.com/mauc-agentic/ledger-service">
+      <label>Commit</label>
+      <input id="f-commit" class="mono" value="844f287e5918c11dc28c02eb2dc2d9be749d9975">
+      <label>Estrategia</label>
+      <select id="f-estrategia">
+        <option value="python_dependency_upgrade">python_dependency_upgrade</option>
+      </select>
+      <label>Objetivo</label>
+      <textarea id="f-objetivo">Actualizar PyYAML de 5.3.1 a 6.0.2</textarea>
+      <label>Versión esperada</label>
+      <input id="f-version" value="PyYAML==6.0.2">
+      <label>Restricciones (opcional)</label>
+      <textarea id="f-restricciones">No modificar el formato del archivo YAML existente</textarea>
+      <div class="row">
+        <div style="flex:1">
+          <label>Límite tiempo (s)</label>
+          <input id="f-tiempo" type="number" value="720">
+        </div>
+        <div style="flex:1">
+          <label>Límite iteraciones</label>
+          <input id="f-iter" type="number" value="3">
+        </div>
+        <div style="flex:1">
+          <label>Límite costo (USD)</label>
+          <input id="f-costo" type="number" step="0.1" value="1.0">
+        </div>
+      </div>
+      <label>Solicitante</label>
+      <input id="f-solicitante" value="dev:tu-correo@example.com">
+      <div class="row">
+        <button class="primary" id="btn-enviar" style="flex:1">Enviar solicitud</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Seguir una ejecución existente</h2>
+      <label>ejecucion_id</label>
+      <div class="row">
+        <input id="f-seguir" type="number" placeholder="1">
+        <button class="ghost" id="btn-seguir">Seguir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Columna derecha: estado en vivo -->
+  <div id="panel-vacio" class="card">
+    <h2>Estado</h2>
+    <p class="empty">Registra una solicitud o sigue un ejecucion_id para ver su progreso aquí.</p>
+  </div>
+
+  <div id="panel" style="display:none">
+    <div class="card">
+      <h2>2 · Estado — ejecución <span id="eid" class="mono"></span></h2>
+      <div class="kv">
+        <div>Estado</div><div id="v-estado"></div>
+        <div>Resultado</div><div id="v-resultado"></div>
+        <div>Iteraciones</div><div id="v-iter"></div>
+        <div>Costo estimado</div><div id="v-costo"></div>
+      </div>
+    </div>
+
+    <div class="card" id="card-viabilidad" style="display:none">
+      <h2>Análisis de viabilidad</h2>
+      <div class="kv">
+        <div>Veredicto</div><div id="v-veredicto"></div>
+      </div>
+      <p class="hint" id="v-impacto"></p>
+      <p class="hint" id="v-evidencia"></p>
+    </div>
+
+    <div class="card" id="card-plan" style="display:none">
+      <h2>3 · Plan propuesto</h2>
+      <p class="hint">hash: <span class="mono" id="v-hash"></span></p>
+      <ul class="plain" id="v-pasos"></ul>
+      <p class="hint">Rutas: <span class="mono" id="v-rutas"></span></p>
+      <label>Aprobador</label>
+      <input id="f-aprobador" value="dev:tu-correo@example.com">
+      <div class="row">
+        <button class="primary" id="btn-aprobar" style="flex:1">Aprobar</button>
+        <button class="danger" id="btn-rechazar" style="flex:1">Rechazar</button>
+      </div>
+    </div>
+
+    <div class="card" id="card-verificaciones" style="display:none">
+      <h2>4 · Verificaciones</h2>
+      <div id="v-verificaciones"></div>
+    </div>
+
+    <div class="card" id="card-eventos" style="display:none">
+      <h2>Eventos de seguridad</h2>
+      <div id="v-eventos"></div>
+    </div>
+
+    <div class="card" id="card-reporte" style="display:none">
+      <h2>5 · Reporte</h2>
+      <p id="v-narrativa" style="font-size:15px; line-height:1.5"></p>
+      <div id="v-fuentes"></div>
+      <div id="v-decisiones"></div>
+      <p class="hint" id="v-cambios"></p>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let ejecucionId = null;
+let pollHandle = null;
+
+function apiBase() { return $('api-base').value.replace(/\/$/, ''); }
+
+function toast(msg, isErr) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' err' : '');
+  setTimeout(() => t.className = 'toast', 3500);
+}
+
+async function api(path, opts) {
+  const res = await fetch(apiBase() + path, Object.assign({
+    headers: {'Content-Type': 'application/json'}
+  }, opts || {}));
+  setConn(true);
+  if (!res.ok) {
+    let detalle = res.statusText;
+    try { detalle = JSON.stringify((await res.json()).detail); } catch (e) {}
+    throw new Error('HTTP ' + res.status + ': ' + detalle);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+function setConn(ok) {
+  $('dot').className = 'dot ' + (ok ? 'ok' : 'bad');
+  $('conn-text').textContent = ok ? 'conectado' : 'sin conexión';
+}
+
+function badge(text, kind) {
+  return '<span class="badge ' + kind + '">' + text + '</span>';
+}
+
+function resultadoBadge(resultado) {
+  if (!resultado) return badge('en curso', 'info');
+  if (resultado === 'LISTO_PARA_REVISION') return badge(resultado, 'ok');
+  if (resultado === 'COMPLETADO_PARCIALMENTE' || resultado === 'PRESUPUESTO_AGOTADO') return badge(resultado, 'warn');
+  return badge(resultado, 'bad');
+}
+
+$('btn-enviar').onclick = async () => {
+  $('btn-enviar').disabled = true;
+  try {
+    const body = {
+      repositorio_url: $('f-repo').value,
+      commit_referencia: $('f-commit').value,
+      estrategia_id: $('f-estrategia').value,
+      objetivo: $('f-objetivo').value,
+      version_esperada: $('f-version').value,
+      restricciones: $('f-restricciones').value || null,
+      limite_tiempo_segundos: parseInt($('f-tiempo').value, 10),
+      limite_iteraciones: parseInt($('f-iter').value, 10),
+      limite_costo_usd: parseFloat($('f-costo').value),
+      solicitante: $('f-solicitante').value,
+    };
+    const r = await api('/solicitudes', {method: 'POST', body: JSON.stringify(body)});
+    toast('Solicitud registrada: ejecución ' + r.ejecucion_id);
+    seguir(r.ejecucion_id);
+  } catch (e) {
+    toast(e.message, true);
+  } finally {
+    $('btn-enviar').disabled = false;
+  }
+};
+
+$('btn-seguir').onclick = () => {
+  const id = parseInt($('f-seguir').value, 10);
+  if (id) seguir(id);
+};
+
+function seguir(id) {
+  ejecucionId = id;
+  $('panel-vacio').style.display = 'none';
+  $('panel').style.display = 'block';
+  $('eid').textContent = id;
+  if (pollHandle) clearInterval(pollHandle);
+  actualizar();
+  pollHandle = setInterval(actualizar, 2500);
+}
+
+async function actualizar() {
+  if (!ejecucionId) return;
+  try {
+    const e = await api('/ejecuciones/' + ejecucionId);
+    $('v-estado').innerHTML = badge(e.estado, 'info');
+    $('v-resultado').innerHTML = resultadoBadge(e.resultado) + (e.motivo_bloqueo ? ' ' + badge(e.motivo_bloqueo, 'bad') : '');
+    $('v-iter').textContent = e.iteraciones_usadas;
+    $('v-costo').textContent = '$' + Number(e.costo_estimado_usd).toFixed(4);
+
+    await cargarViabilidad();
+    await cargarPlan(e.estado);
+    await cargarVerificaciones();
+    await cargarEventos();
+    if (e.resultado) {
+      await cargarReporte();
+      clearInterval(pollHandle);
+      pollHandle = null;
+    }
+  } catch (e) {
+    setConn(false);
+  }
+}
+
+async function cargarViabilidad() {
+  try {
+    const v = await api('/ejecuciones/' + ejecucionId + '/analisis-viabilidad');
+    $('card-viabilidad').style.display = 'block';
+    $('v-veredicto').innerHTML = badge(v.veredicto, v.veredicto === 'VIABLE' ? 'ok' : 'bad');
+    $('v-impacto').textContent = 'Impacto: ' + v.impacto_detectado;
+    $('v-evidencia').textContent = 'Evidencia: ' + v.evidencia;
+  } catch (e) { /* aún no hay análisis */ }
+}
+
+async function cargarPlan(estado) {
+  try {
+    const p = await api('/ejecuciones/' + ejecucionId + '/plan');
+    $('card-plan').style.display = 'block';
+    $('v-hash').textContent = p.hash;
+    $('v-pasos').innerHTML = p.pasos.map(x => '<li>' + x + '</li>').join('');
+    $('v-rutas').textContent = p.rutas_declaradas.join(', ');
+    const habilitar = estado === 'ESPERANDO_APROBACION';
+    $('btn-aprobar').disabled = !habilitar;
+    $('btn-rechazar').disabled = !habilitar;
+    $('btn-aprobar').onclick = () => decidir(p, 'APROBADO');
+    $('btn-rechazar').onclick = () => decidir(p, 'RECHAZADO');
+  } catch (e) { /* aún no hay plan */ }
+}
+
+async function decidir(plan, decision) {
+  try {
+    await api('/ejecuciones/' + ejecucionId + '/aprobacion', {
+      method: 'POST',
+      body: JSON.stringify({
+        plan_id: plan.plan_id, plan_hash: plan.hash, decision: decision,
+        aprobador: $('f-aprobador').value,
+      }),
+    });
+    toast('Decisión registrada: ' + decision);
+    $('btn-aprobar').disabled = true;
+    $('btn-rechazar').disabled = true;
+    if (!pollHandle) pollHandle = setInterval(actualizar, 2500);
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+async function cargarVerificaciones() {
+  const vs = await api('/ejecuciones/' + ejecucionId + '/verificaciones');
+  if (!vs.length) return;
+  $('card-verificaciones').style.display = 'block';
+  $('v-verificaciones').innerHTML = vs.map(v =>
+    '<div class="verif ' + (v.resultado === 'EXITOSA' ? 'ok' : 'bad') + '">' +
+    badge(v.resultado, v.resultado === 'EXITOSA' ? 'ok' : 'bad') +
+    ' <span class="mono">' + v.comando + '</span>' +
+    ' — pruebas ' + v.pruebas_exitosas + '/' + v.pruebas_totales +
+    ' (código ' + v.codigo_salida + ')' +
+    '<pre>' + escapeHtml(v.salida_capturada.slice(0, 800)) + '</pre></div>'
+  ).join('');
+}
+
+async function cargarEventos() {
+  const evs = await api('/ejecuciones/' + ejecucionId + '/eventos');
+  if (!evs.length) return;
+  $('card-eventos').style.display = 'block';
+  $('v-eventos').innerHTML = evs.map(ev =>
+    '<div class="evento">' + badge(ev.severidad, 'bad') + ' <span class="mono">' + ev.regla + '</span><br>' +
+    escapeHtml(ev.accion_intentada) + '<div class="hint">origen: ' + ev.origen + '</div></div>'
+  ).join('');
+}
+
+async function cargarReporte() {
+  const r = await api('/ejecuciones/' + ejecucionId + '/reporte');
+  $('card-reporte').style.display = 'block';
+  $('v-narrativa').textContent = r.narrativa + (r.narrativa_generada_por_ia ? ' (redactado por IA)' : ' (resumen determinista)');
+  $('v-fuentes').innerHTML = r.fuentes.length
+    ? '<p class="hint"><b>Fuentes:</b> ' + r.fuentes.map(f => f.url).join(' · ') + '</p>' : '';
+  $('v-decisiones').innerHTML = r.decisiones_tecnicas.map(d =>
+    '<p class="hint">' + (d.sustentada ? '✓' : '⚠ sin sustento') + ' ' + d.descripcion + '</p>'
+  ).join('');
+  $('v-cambios').textContent = r.cambios.length ? 'Cambios: ' + r.cambios.join(', ') : 'Sin cambios aplicados.';
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Ping inicial de conexión
+api('/docs').catch(() => {});
+</script>
+</body>
+</html>

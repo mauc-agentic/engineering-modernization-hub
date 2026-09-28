@@ -88,6 +88,8 @@ def test_decision_aprobacion(repo):
         aprobador="dev:test@example.com",
     ))
     assert d.id is not None
+    vigente = repo.obtener_decision_aprobacion_vigente(p.id)
+    assert vigente.decision is DecisionAprobacionValor.APROBADO
 
 
 def test_fuente_decision_tecnica_y_cita(repo):

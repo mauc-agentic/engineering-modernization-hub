@@ -20,7 +20,7 @@ class ScriptedModel:
         self._indice = 0
         self.mensajes_recibidos: list[list[dict]] = []
 
-    def completar(self, *, mensajes, herramientas=None, nivel_esfuerzo="low") -> RespuestaModelo:
+    def completar(self, *, mensajes, sistema=None, herramientas=None, nivel_esfuerzo="low") -> RespuestaModelo:
         self.mensajes_recibidos.append(mensajes)
         if self._indice >= len(self._respuestas):
             raise IndexError(

@@ -38,11 +38,21 @@ class PresupuestoMeter:
     ahora: Callable[[], datetime] = field(default=utcnow)
     precio_entrada_por_token: float = PRECIO_ENTRADA_POR_TOKEN_DEFECTO
     precio_salida_por_token: float = PRECIO_SALIDA_POR_TOKEN_DEFECTO
+    momento_inicio: datetime | None = None
+    """Si se da (al reconstruir el medidor tras una interrupción de
+    aprobación), se usa como origen del tiempo de pared en vez de `ahora()`,
+    para que la espera humana cuente como tiempo transcurrido real."""
+    tokens_ya_consumidos: tuple[int, int] = (0, 0)
+    """(tokens_entrada, tokens_salida) ya persistidos, al reconstruir."""
+    iteraciones_ya_usadas: int = 0
     _inicio: datetime = field(init=False)
     _estado: EstadoPresupuesto = field(init=False, default_factory=EstadoPresupuesto)
 
     def __post_init__(self) -> None:
-        self._inicio = self.ahora()
+        self._inicio = self.momento_inicio if self.momento_inicio is not None else self.ahora()
+        if self.tokens_ya_consumidos != (0, 0):
+            self.registrar_llamada_modelo(*self.tokens_ya_consumidos)
+        self._estado.iteraciones_usadas = self.iteraciones_ya_usadas
 
     @property
     def estado(self) -> EstadoPresupuesto:

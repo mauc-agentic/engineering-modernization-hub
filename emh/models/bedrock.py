@@ -28,10 +28,13 @@ class BedrockModel:
         self,
         *,
         mensajes: list[dict[str, Any]],
+        sistema: str | None = None,
         herramientas: list[dict[str, Any]] | None = None,
         nivel_esfuerzo: NivelEsfuerzo = "low",
     ) -> RespuestaModelo:
         kwargs: dict[str, Any] = {"modelId": self._model_id, "messages": mensajes}
+        if sistema:
+            kwargs["system"] = [{"text": sistema}]
         if herramientas:
             kwargs["toolConfig"] = {"tools": herramientas}
         kwargs["additionalModelRequestFields"] = {

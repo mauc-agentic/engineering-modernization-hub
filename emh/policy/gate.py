@@ -91,7 +91,12 @@ class PolicyGate:
                 "el comando contiene metacaracteres de shell",
             )
 
-        if comando[0] not in self._ejecutables_globales:
+        # Se compara por nombre base: la estrategia puede declarar rutas
+        # absolutas (p. ej. /tmp/venv/bin/pytest, NFR-004: venv en tmpfs
+        # porque la raíz del sandbox es de solo lectura). Esto no afloja el
+        # control: el comando completo TODAVÍA debe coincidir con un
+        # perfil exacto declarado por la estrategia activa, más abajo.
+        if Path(comando[0]).name not in self._ejecutables_globales:
             return Decision(
                 False, "control_02_comandos_permitidos",
                 f"ejecutable '{comando[0]}' fuera de la allowlist global",

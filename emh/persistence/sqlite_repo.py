@@ -164,6 +164,10 @@ class SqliteRunRepository:
             creado_en=_parse_dt(row["creado_en"]),
         )
 
+    def actualizar_estado_plan(self, plan_id: int, estado: str) -> None:
+        self._conn.execute("UPDATE plan SET estado = ? WHERE id = ?", (estado, plan_id))
+        self._conn.commit()
+
     def obtener_plan_vigente(self, ejecucion_id: int) -> Plan | None:
         row = self._conn.execute(
             """SELECT * FROM plan WHERE ejecucion_id = ? AND estado != 'SUPERSEDIDO'
@@ -192,6 +196,19 @@ class SqliteRunRepository:
         )
         self._conn.commit()
         return decision.model_copy(update={"id": cur.lastrowid})
+
+    def obtener_decision_aprobacion_vigente(self, plan_id: int) -> DecisionAprobacion | None:
+        row = self._conn.execute(
+            "SELECT * FROM decision_aprobacion WHERE plan_id = ? ORDER BY id DESC LIMIT 1",
+            (plan_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return DecisionAprobacion(
+            id=row["id"], plan_id=row["plan_id"], plan_hash=row["plan_hash"],
+            decision=row["decision"], aprobador=row["aprobador"], comentario=row["comentario"],
+            decidido_en=_parse_dt(row["decidido_en"]),
+        )
 
     # -- DecisionTecnica -----------------------------------------------------
 

@@ -64,6 +64,13 @@ def test_control2_comando_declarado_permitido(gate):
     assert d.permitido
 
 
+def test_control2_ruta_absoluta_se_compara_por_nombre_base(gate):
+    """NFR-004: el venv del wheelhouse vive en /tmp (raíz de solo lectura),
+    así que la estrategia declara rutas absolutas como /tmp/venv/bin/pytest."""
+    d = gate.verificar_comando(["/tmp/venv/bin/pytest", "-q"], [["/tmp/venv/bin/pytest", "-q"]])
+    assert d.permitido
+
+
 def test_control2_ejecutable_fuera_de_allowlist_global(gate):
     d = gate.verificar_comando(["bash", "-c", "echo hola"], [["bash"]])
     assert not d.permitido

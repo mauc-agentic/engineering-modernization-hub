@@ -1,0 +1,69 @@
+[project]
+name = "emh"
+version = "0.1.0"
+description = "Engineering Modernization Hub - prototipo AIUP (caso Wenia)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "langgraph>=0.2.60",
+    "boto3>=1.35",
+    "PyYAML>=6.0",
+    "docker>=7.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+    "import-linter>=2.1",
+    "ruff>=0.7",
+]
+postgres = ["psycopg[binary]>=3.2"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["emh"]
+
+[tool.pytest.ini_options]
+markers = [
+    "simulated: nivel A, ScriptedModel, determinista (SIMULATED)",
+    "live: nivel B, modelo real (Bedrock/Nova 2 Lite), requiere credenciales AWS",
+]
+testpaths = ["tests"]
+
+[tool.importlinter]
+root_package = "emh"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "El nucleo no depende de nadie (NFR-015, NFR-016)"
+type = "forbidden"
+source_modules = ["emh.core"]
+forbidden_modules = [
+    "emh.policy", "emh.harness", "emh.agent", "emh.strategies",
+    "emh.models", "emh.execution", "emh.persistence", "emh.reporting", "emh.api",
+    "boto3", "docker", "sqlite3", "fastapi", "langgraph",
+]
+
+[[tool.importlinter.contracts]]
+name = "Las estrategias no importan agente/harness/politica (03-arquitectura #5)"
+type = "forbidden"
+source_modules = ["emh.strategies"]
+forbidden_modules = ["emh.agent", "emh.harness", "emh.policy"]
+
+[[tool.importlinter.contracts]]
+name = "Las capas apuntan hacia el nucleo (layers)"
+type = "layers"
+layers = [
+    "emh.api",
+    "emh.agent",
+    "emh.harness",
+    "emh.policy",
+    "emh.core",
+]

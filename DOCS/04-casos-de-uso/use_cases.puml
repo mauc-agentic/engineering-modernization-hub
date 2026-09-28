@@ -1,0 +1,34 @@
+@startuml Use Cases Overview
+left to right direction
+
+actor "Desarrollador" as dev
+actor "Plataforma" as plat
+actor "Equipo de seguridad" as sec
+
+rectangle "Engineering Modernization Hub" {
+    usecase "UC-001\nRegistrar solicitud de modernización" as UC001
+    usecase "UC-002\nDescubrir y analizar viabilidad" as UC002
+    usecase "UC-003\nRevisar y aprobar el plan" as UC003
+    usecase "UC-004\nGenerar y verificar cambios" as UC004
+    usecase "UC-005\nConsultar reporte y eventos" as UC005
+}
+
+dev --> UC001
+plat --> UC002
+UC002 ..> UC001 : <<extend>>\n(dispara tras registrar)
+dev --> UC003
+UC003 ..> UC002 : <<extend>>\n(requiere análisis previo)
+plat --> UC004
+UC004 ..> UC003 : <<extend>>\n(requiere aprobación)
+dev --> UC005
+sec --> UC005
+UC005 ..> UC004 : <<extend>>\n(consulta resultado)
+
+note right of UC004
+  Incluye el bucle de corrección
+  (FR-017) y la resistencia a
+  solicitudes inseguras (FR-022)
+  como flujos alternativos.
+end note
+
+@enduml

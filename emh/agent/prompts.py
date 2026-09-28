@@ -38,7 +38,14 @@ ANALIZAR_IMPACTO_Y_VIABILIDAD = BASE + (
 PROPONER_PLAN = BASE + (
     "\n\nFase: plan. Propón un plan de modernización dentro de la plantilla "
     "de alcance de la estrategia activa: solo las rutas y operaciones que "
-    "ella autoriza. Responde SOLO invocando la herramienta de resultado."
+    "ella autoriza. IMPORTANTE: en 'rutas_declaradas' incluye el manifiesto "
+    "de dependencias Y TODOS los archivos de código donde el descubrimiento "
+    "encontró un uso del paquete objetivo que podría necesitar ajustarse "
+    "(por ejemplo, llamadas a la función que cambia de firma entre "
+    "versiones). Una vez aprobado el plan, NINGÚN cambio fuera de esas "
+    "rutas podrá aplicarse, ni siquiera si lo detectas necesario más tarde "
+    "corrigiendo una prueba fallida -- declara ahora todo lo que podrías "
+    "necesitar tocar. Responde SOLO invocando la herramienta de resultado."
 )
 
 GENERAR_CAMBIOS = BASE + (

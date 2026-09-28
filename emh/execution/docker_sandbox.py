@@ -44,7 +44,11 @@ class DockerSandbox:
             working_dir="/workspace",
             user="1000:1000",  # NFR-004: usuario no root
             read_only=True,  # NFR-004: raíz de solo lectura salvo el workspace
-            tmpfs={"/tmp": "rw,size=256m"},
+            # exec explícito: encontrado en la primera ejecución en vivo real
+            # -- el montaje tmpfs de este Docker por defecto añade noexec, lo
+            # que rompía CUALQUIER binario del venv (incluido pip). Sin exec
+            # aquí, el patrón wheelhouse-en-/tmp de NFR-004 no funciona.
+            tmpfs={"/tmp": "rw,exec,size=256m"},
             network_disabled=True,  # ADR-005/D-6: nunca hay red en el sandbox
             cap_drop=["ALL"],
             security_opt=["no-new-privileges"],

@@ -78,6 +78,20 @@ class ErrorSalidaModelo(Exception):
     sin manejar."""
 
 
+def _asegurar_termina_en_turno_de_usuario(
+    mensajes: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Nova 2 Lite rechaza la llamada ('prefill no soportado') si el último
+    mensaje de la conversación es del asistente y `reasoningConfig` está
+    activo -- encontrado en la primera ejecución en vivo real (el bucle de
+    exploración puede terminar con una respuesta de texto libre del modelo,
+    sin llamar a ninguna herramienta). Se cierra con un turno de usuario
+    sintético en vez de reenviar tal cual."""
+    if mensajes and mensajes[-1].get("role") == "assistant":
+        return mensajes + [{"role": "user", "content": [{"text": "Continúa con la siguiente fase."}]}]
+    return mensajes
+
+
 def pedir_estructurado(
     ctx: ContextoAgente,
     nodo: str,
@@ -91,6 +105,7 @@ def pedir_estructurado(
 ) -> dict[str, Any]:
     """Patrón de salida estructurada: una sola herramienta disponible, cuyo
     esquema ES el resultado que necesitamos. Evita parseo de texto libre."""
+    mensajes = _asegurar_termina_en_turno_de_usuario(mensajes)
     herramientas = [_tool_spec(nombre_tool, descripcion_tool, json_schema)]
     respuesta = llamar_modelo(
         ctx, nodo, mensajes, sistema=sistema, herramientas=herramientas, nivel_esfuerzo=nivel_esfuerzo
@@ -123,7 +138,13 @@ _ESQUEMAS_HARNESS: dict[str, dict[str, Any]] = {
         "descripcion": "Consulta una fuente oficial permitida por la estrategia activa.",
         "json_schema": {
             "type": "object",
-            "properties": {"dominio": {"type": "string"}, "consulta": {"type": "string"}},
+            "properties": {
+                "dominio": {
+                    "type": "string",
+                    "description": "Solo el nombre de dominio, sin esquema ni ruta (p. ej. 'pypi.org', no 'https://pypi.org/...').",
+                },
+                "consulta": {"type": "string", "description": "Ruta o término a consultar dentro del dominio."},
+            },
             "required": ["dominio", "consulta"],
         },
     },
@@ -159,7 +180,7 @@ def bucle_exploracion(
 
     especs = _tool_specs_harness(herramientas_permitidas)
     registradas = frozenset(herramientas_permitidas) | {HERRAMIENTA_TERMINAR}
-    historial = list(mensajes)
+    historial = _asegurar_termina_en_turno_de_usuario(list(mensajes))
 
     for _ in range(ctx.max_turnos_exploracion):
         respuesta = llamar_modelo(

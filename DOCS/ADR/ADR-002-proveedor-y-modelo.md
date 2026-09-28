@@ -60,3 +60,7 @@ Con el límite de costo por solicitud fijado en D-4 (USD 1.00), hay margen de so
 - Los prompts (`emh/agent`) se diseñan cortos y estructurados (salida JSON vía *tool use* siempre que sea posible) para aprovechar el menor costo por token sin perder fiabilidad de parseo.
 - Los niveles de esfuerzo de razonamiento se configuran por nodo: `low` para pasos mecánicos (listar archivos, resumir una fuente), `high` para el diagnóstico de errores y la construcción del plan.
 - El identificador del modelo permanece en configuración (`C-004` no cambia en ese sentido), solo cambia el valor por defecto.
+
+### Hallazgo de la primera ejecución en vivo (2026-09-28)
+
+Con `reasoningConfig` activo (todos los niveles, incluido `low`), la API Converse de Nova 2 Lite rechaza una conversación cuyo último mensaje sea del asistente (`ValidationException: Assistant prefill is not supported when reasoningConfig type is 'enabled'`). Esto ocurre cuando un bucle de exploración termina con una respuesta de texto libre del modelo en vez de una llamada a herramienta. `emh/agent/runtime.py` cierra siempre la conversación con un turno de usuario sintético antes de la siguiente llamada estructurada (`_asegurar_termina_en_turno_de_usuario`).

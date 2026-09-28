@@ -1,0 +1,9 @@
+# Copia este archivo a terraform.tfvars y ajusta los valores antes de
+# `terraform apply` (ADR-006, ADR-007). terraform.tfvars NO se versiona.
+
+email_alertas_presupuesto = "tu-correo@example.com"
+
+# Valores por defecto ya alineados con las decisiones de ADR-006/ADR-007;
+# normalmente no hace falta tocarlos:
+# region                  = "us-east-1"
+# limite_presupuesto_usd  = 100

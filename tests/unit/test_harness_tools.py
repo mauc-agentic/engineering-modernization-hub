@@ -82,6 +82,25 @@ def test_list_files_lista_dentro_del_workspace(ctx):
     assert "ledger/config.py" in r.contenido.replace("\\", "/")
 
 
+def test_list_files_workspace_bajo_un_symlink(tmp_path, eventos):
+    """Regresión: encontrado en la primera ejecución en vivo real (macOS
+    resuelve /var como symlink a /private/var). Si solo se resuelve un lado
+    de la comparación, `Path.relative_to` lanza `ValueError` y la ejecución
+    termina en una excepción no manejada -- justo lo que RN-11 prohíbe."""
+    real = tmp_path / "real"
+    real.mkdir()
+    (real / "a.txt").write_text("x")
+    enlace = tmp_path / "enlace"
+    enlace.symlink_to(real)
+
+    ctx_symlink = ContextoHerramientas(
+        workspace_root=enlace, gate=PolicyGate(EJECUTABLES), registrar_evento=eventos.append,
+    )
+    r = list_files(ctx_symlink, ArgsListFiles(ruta="."))
+    assert r.ok
+    assert "a.txt" in r.contenido
+
+
 def test_read_file_confinamiento_bloquea_traversal(ctx, eventos):
     r = read_file(ctx, ArgsReadFile(ruta="../../etc/passwd"))
     assert not r.ok
@@ -110,6 +129,19 @@ def test_search_docs_dominio_permitido(ctx):
     r = search_docs(ctx, ArgsSearchDocs(consulta="project/PyYAML", dominio="pypi.org"))
     assert r.ok
     assert "Loader" in r.contenido
+
+
+def test_search_docs_acepta_dominio_con_esquema(ctx):
+    """Regresión: encontrado en la primera ejecución en vivo real -- el
+    modelo propuso 'https://pyyaml.org' en vez de 'pyyaml.org' y el chequeo
+    de allowlist, por comparación exacta, lo rechazó, dejando al modelo sin
+    evidencia real (llevó a un veredicto de viabilidad equivocado)."""
+    ctx.dominios_fuente_permitidos = ["pyyaml.org"]
+    urls_pedidas = []
+    ctx.fetcher = lambda url: (urls_pedidas.append(url), "contenido real")[1]
+    r = search_docs(ctx, ArgsSearchDocs(consulta="wiki/PyYAMLDocumentation", dominio="https://pyyaml.org"))
+    assert r.ok
+    assert urls_pedidas[0] == "https://pyyaml.org/wiki/PyYAMLDocumentation"
 
 
 def test_search_docs_dominio_no_permitido_bloqueado(ctx, eventos):

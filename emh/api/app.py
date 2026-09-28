@@ -109,3 +109,10 @@ def crear_app(aplicacion: Aplicacion) -> FastAPI:
             raise HTTPException(404, detail=_error("NO_ENCONTRADO", "ejecución no encontrada", ejecucion_id))
 
     return app
+
+
+def app_factory() -> FastAPI:
+    """Fábrica de cero argumentos, para `uvicorn emh.api.app:app_factory
+    --factory` (contenedor/producción). `EMH_MODO_SIMULADO=1` la arma con
+    `ScriptedModel` en vez de Bedrock real."""
+    return crear_app(Aplicacion())

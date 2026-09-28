@@ -119,12 +119,13 @@ def list_files(ctx: ContextoHerramientas, args: ArgsListFiles) -> ResultadoHerra
     if not d.permitido:
         return _denegar(ctx, d.regla, d.motivo, OrigenEvento.MODELO)
 
-    objetivo = (ctx.workspace_root / args.ruta).resolve()
+    raiz = ctx.workspace_root.resolve()  # macOS: /var/... es symlink a /private/var/...;
+    objetivo = (raiz / args.ruta).resolve()  # sin resolver ambos lados, relative_to() falla
     if not objetivo.exists():
         return ResultadoHerramienta(ok=False, motivo_rechazo=f"'{args.ruta}' no existe")
 
     entradas = sorted(
-        str(p.relative_to(ctx.workspace_root))
+        str(p.relative_to(raiz))
         for p in objetivo.rglob("*")
         if ".git" not in p.parts
     )
@@ -156,15 +157,25 @@ def read_file(ctx: ContextoHerramientas, args: ArgsReadFile) -> ResultadoHerrami
 # ---------------------------------------------------------------------------
 
 
+def _dominio_pelado(valor: str) -> str:
+    """Normaliza lo que el modelo mande como 'dominio' -- en la primera
+    ejecución en vivo el modelo propuso 'https://pyyaml.org' en vez de
+    'pyyaml.org'. Se acepta cualquiera de las dos formas; el chequeo de
+    permiso sigue siendo exacto contra el dominio ya pelado (no se afloja
+    la allowlist, solo se interpreta correctamente el argumento)."""
+    return urlparse(valor).netloc or valor.strip().rstrip("/")
+
+
 def search_docs(ctx: ContextoHerramientas, args: ArgsSearchDocs) -> ResultadoHerramienta:
-    if not any(args.dominio == dp or args.dominio.endswith("." + dp) for dp in ctx.dominios_fuente_permitidos):
+    dominio = _dominio_pelado(args.dominio)
+    if not any(dominio == dp or dominio.endswith("." + dp) for dp in ctx.dominios_fuente_permitidos):
         return _denegar(
             ctx, "control_02_comandos_permitidos",
             f"dominio '{args.dominio}' no está en las fuentes oficiales de la estrategia",
             OrigenEvento.MODELO,
         )
 
-    url = f"https://{args.dominio}/{args.consulta.lstrip('/')}"
+    url = f"https://{dominio}/{args.consulta.lstrip('/')}"
     try:
         contenido = ctx.fetcher(url)
     except Exception as exc:  # errores de red se devuelven como resultado, no excepción (RN-11)

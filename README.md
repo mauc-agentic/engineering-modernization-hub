@@ -62,6 +62,22 @@ uvicorn emh.api.app:app_factory --factory --reload --port 8000
 
 La documentación interactiva (OpenAPI) queda en `http://localhost:8000/docs`.
 
+## Dashboard de demo (visual, sin Backstage)
+
+Backstage es F2 (`10-evolucion-producto.md`) — una instancia propia, un
+*plugin* con su propio sistema de diseño y un proxy de backend son
+demasiado para el tiempo disponible. En su lugar, con la API ya arriba:
+
+```bash
+open frontend/index.html   # o: python3 -m http.server 5500 -d frontend
+```
+
+Es una sola página sin dependencias que habla **directo con la API real**
+(no simulada): registra la solicitud, sondea el estado, muestra el análisis
+de viabilidad y el plan con botones **Aprobar**/**Rechazar**, y el reporte
+final con verificaciones y eventos de seguridad en vivo. El campo de la
+esquina superior derecha apunta a `http://localhost:8000` por defecto.
+
 ## Reproducir la demo de extremo a extremo
 
 Dos repositorios propios, verificados empíricamente (no solo documentados),

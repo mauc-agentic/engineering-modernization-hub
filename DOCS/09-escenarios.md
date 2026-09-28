@@ -104,18 +104,24 @@ POST /ejecuciones/101/aprobacion
 4. Se ejecuta `pytest -q --tb=short`. Salida real capturada:
 
 ```
-FAILED tests/test_config.py::test_load_config - TypeError: load() missing 1 required positional argument: 'Loader'
-1 failed, 6 passed in 0.41s
+FAILED tests/test_config.py::test_load_config_returns_dict - TypeError: load() missing 1 required positional argument: 'Loader'
+FAILED tests/test_config.py::test_load_config_has_moneda - TypeError: load() missing 1 required positional argument: 'Loader'
+FAILED tests/test_config.py::test_load_config_has_limite_diario - TypeError: load() missing 1 required positional argument: 'Loader'
+FAILED tests/test_fixtures.py::test_load_fixtures_returns_dict - TypeError: load() missing 1 required positional argument: 'Loader'
+FAILED tests/test_fixtures.py::test_load_fixtures_tiene_dos_cuentas - TypeError: load() missing 1 required positional argument: 'Loader'
+5 failed, 2 passed in 0.02s
 ```
 
+Salida real capturada, verificada empíricamente contra el repositorio de la demo el 2026-09-28 (`demo/ledger-service/`).
+
 5. `resultado = FALLIDA` (código de salida ≠ 0, control 8). **Esto es el escenario 3.**
-6. La plataforma analiza el error a partir de la salida real capturada: identifica que `ledger/config.py:14` y `ledger/fixtures.py:9` llaman a `yaml.load` sin `Loader=`.
+6. La plataforma analiza el error a partir de la salida real capturada: identifica que `ledger/config.py:8` y `ledger/fixtures.py:8` llaman a `yaml.load` sin `Loader=`.
 7. Propone una corrección: añadir `Loader=yaml.SafeLoader` en ambas líneas.
 8. `PolicyGate` valida la corrección: las rutas (`ledger/config.py`, `ledger/fixtures.py`) están en `rutas_declaradas` → permitido. `iteraciones_usadas` pasa de 0 a 1 (límite: 3).
 9. Se reejecuta `pytest -q --tb=short`:
 
 ```
-7 passed in 0.38s
+7 passed in 0.02s
 ```
 
 10. `resultado = EXITOSA`. Todas las verificaciones del plan terminaron con éxito. **La ejecución completa cae en el escenario 1: modernización exitosa.**

@@ -100,7 +100,6 @@ class ReportRenderer:
         narrativa_generada_por_ia = False
         if self._modelo is not None:
             try:
-                from emh.agent.runtime import pedir_estructurado, ContextoAgente
                 # Reporte "ligero": no se pasa por PresupuestoMeter de una
                 # ejecución (el reporte se puede pedir después de terminada);
                 # se usa el modelo directamente, sin control 4 (no hay

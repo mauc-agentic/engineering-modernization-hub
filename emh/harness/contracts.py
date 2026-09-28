@@ -42,7 +42,12 @@ class ArgsApplyPatch(BaseModel):
 
 
 class ArgsRunTests(BaseModel):
-    comando: list[str]
+    """`comandos`: la secuencia completa a ejecutar en UN solo contenedor
+    (instalación + verificación) -- necesitan compartir el mismo sistema de
+    archivos (el venv que crea el primer comando debe seguir ahí para el
+    último). Ver ADR-005 y el control 2."""
+
+    comandos: list[list[str]]
 
 
 @dataclass

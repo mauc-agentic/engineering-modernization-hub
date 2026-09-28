@@ -62,6 +62,7 @@ class ContextoHerramientas:
     ejecutor_host: EjecutorHost = _ejecutor_host_real
     fetcher: Fetcher = _fetcher_real
     origen_id: int = 0  # ejecucion_id, para construir EventoSeguridad
+    wheelhouse_dir: Path | None = None  # ADR-005/D-6: ruedas ya descargadas en el host
 
 
 def _denegar(ctx: ContextoHerramientas, regla: str, motivo: str, origen: OrigenEvento, detalles: list[str] | None = None) -> ResultadoHerramienta:
@@ -220,22 +221,37 @@ def apply_patch(ctx: ContextoHerramientas, args: ArgsApplyPatch, *, operaciones_
 
 
 def run_tests(ctx: ContextoHerramientas, args: ArgsRunTests) -> ResultadoHerramienta:
-    d = ctx.gate.verificar_comando(args.comando, ctx.comandos_permitidos_estrategia)
-    if not d.permitido:
-        return _denegar(ctx, d.regla, d.motivo, OrigenEvento.MODELO)
+    """Ejecuta TODA la secuencia (instalación + verificación) en UN solo
+    contenedor efímero -- el venv que crea el primer comando (NFR-004: raíz
+    de solo lectura, venv en /tmp) tiene que seguir ahí para el último."""
+    for comando in args.comandos:
+        d = ctx.gate.verificar_comando(comando, ctx.comandos_permitidos_estrategia)
+        if not d.permitido:
+            return _denegar(ctx, d.regla, d.motivo, OrigenEvento.MODELO)
 
     if ctx.sandbox is None:
         return ResultadoHerramienta(ok=False, motivo_rechazo="no hay sandbox configurado")
 
-    contenedor_id = ctx.sandbox.crear(ctx.workspace_root)
+    kwargs_crear = {"wheelhouse": ctx.wheelhouse_dir} if ctx.wheelhouse_dir is not None else {}
+    contenedor_id = ctx.sandbox.crear(ctx.workspace_root, **kwargs_crear)
     try:
-        resultado = ctx.sandbox.ejecutar(contenedor_id, args.comando, con_red=False)
+        bloques: list[str] = []
+        codigo_final = 0
+        for i, comando in enumerate(args.comandos):
+            resultado = ctx.sandbox.ejecutar(contenedor_id, comando, con_red=False)
+            bloques.append(f"$ {' '.join(comando)}\n{resultado.salida}")
+            codigo_final = resultado.codigo_salida
+            es_ultimo = i == len(args.comandos) - 1
+            if resultado.codigo_salida != 0 and not es_ultimo:
+                # un paso de instalación falló: no tiene sentido seguir con
+                # el resto de la secuencia (RN-11: se informa, no se cuelga)
+                break
     finally:
         ctx.sandbox.destruir(contenedor_id)
 
     return ResultadoHerramienta(
-        ok=True, contenido=redactar(resultado.salida), no_confiable=True,
-        detalles=[str(resultado.codigo_salida)],
+        ok=True, contenido=redactar("\n".join(bloques)), no_confiable=True,
+        detalles=[str(codigo_final)],
     )
 
 

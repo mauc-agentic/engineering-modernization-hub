@@ -13,25 +13,29 @@ Ninguno de los dos repositorios lo entrega Wenia (C-013); ambos se crean como pa
 
 | Campo | Valor |
 |---|---|
-| **URL** | `https://github.com/<owner-a-definir>/ledger-service` (se crea durante la implementación; placeholder hasta entonces) |
-| **Commit de partida** | Se fija al terminar de escribir el fixture (primer commit del repositorio) |
+| **URL** | [`https://github.com/mauc-agentic/ledger-service`](https://github.com/mauc-agentic/ledger-service) (privado) |
+| **Commit de partida** | `844f287e5918c11dc28c02eb2dc2d9be749d9975` |
 | **Modernización seleccionada** | Actualización de dependencia Python: `PyYAML` |
 | **Versión actual → objetivo** | `5.3.1` → `6.0.2` |
-| **Razón de la selección** | Es una modernización real y acotada (una sola dependencia, subconjunto claro de archivos afectados), con un *breaking change* documentado oficialmente (PyYAML 6.0 exige `Loader=` explícito en `yaml.load`) que rompe una prueba existente en el primer intento sin necesidad de forzar nada artificialmente — cumple la condición del caso de que la modernización elegida rompa una prueba al primer intento. |
+| **Razón de la selección** | Es una modernización real y acotada (una sola dependencia, subconjunto claro de archivos afectados), con un *breaking change* documentado oficialmente (PyYAML 6.0 exige `Loader=` explícito en `yaml.load`) que rompe pruebas existentes en el primer intento sin necesidad de forzar nada artificialmente — cumple la condición del caso de que la modernización elegida rompa una prueba al primer intento. |
 
-Contenido mínimo del fixture: un paquete `ledger/` con una API mínima de asientos contables en memoria, un `ledger/config.py` que carga configuración YAML con `yaml.load` sin `Loader=` (dos ocurrencias, en `config.py` y `fixtures.py`), `requirements.txt` con `PyYAML==5.3.1`, y `tests/test_config.py` con al menos las pruebas que hoy pasan sobre 5.3.1 y fallarían sobre 6.0.2 sin la corrección.
+Contenido del fixture: un paquete `ledger/` con un libro contable mínimo en memoria (`ledger.py`), `config.py` y `fixtures.py` que cargan YAML con `yaml.load` sin `Loader=` (una llamada en cada uno), `requirements.txt` con `PyYAML==5.3.1`, y `tests/` con 7 pruebas.
+
+**Verificado empíricamente el 2026-09-28** (no solo documentado): con `PyYAML==5.3.1`, las 7 pruebas pasan (con advertencia de obsolescencia). Con `PyYAML==6.0.2` sin corregir, **5 fallan y 2 pasan** (`TypeError: load() missing 1 required positional argument: 'Loader'` en `config.py:8` y `fixtures.py:8`). Con la corrección (`Loader=yaml.SafeLoader` en ambos archivos), las 7 vuelven a pasar bajo `6.0.2`.
 
 ## Repositorio 2 — `orders-api` (escenario 2)
 
 | Campo | Valor |
 |---|---|
-| **URL** | `https://github.com/<owner-a-definir>/orders-api` (se crea durante la implementación; placeholder hasta entonces) |
-| **Commit de partida** | Se fija al terminar de escribir el fixture |
+| **URL** | [`https://github.com/mauc-agentic/orders-api`](https://github.com/mauc-agentic/orders-api) (privado) |
+| **Commit de partida** | `5e60dabbd00074d9da88ae422a8d6d778733e9ec` |
 | **Modernización seleccionada** | Actualización de dependencia Python: `Flask` |
 | **Versión actual → objetivo** | `2.0.3` → `3.0.x` |
 | **Razón de la selección** | Genera una inviabilidad real y verificable contra una fuente oficial (metadatos de PyPI: `Flask==3.0.0` exige `Requires-Python: >=3.8`) en conflicto con una restricción explícita y realista de la solicitud (runtime fijado a Python 3.7), sin necesitar ninguna simulación del veredicto. |
 
-Contenido mínimo del fixture: una API mínima de pedidos sobre Flask, `requirements.txt` con `Flask==2.0.3`, `runtime.txt` con `python-3.7.13`, y pruebas existentes que pasan sobre la versión actual (y que nunca llegan a ejecutarse en este escenario, porque la ejecución termina `BLOQUEADO` antes de tocar código, según UC-002 A1).
+Contenido del fixture: una API mínima de pedidos sobre Flask (`orders_api/app.py`, crear/consultar pedidos), `requirements.txt` con `Flask==2.0.3` y `Werkzeug==2.0.3`, `runtime.txt` con `python-3.7.13`, y 2 pruebas que nunca llegan a ejecutarse en este escenario (la ejecución termina `BLOQUEADO` antes de tocar código, según UC-002 A1).
+
+**Verificado empíricamente el 2026-09-28:** los metadatos reales del paquete `Flask==3.0.0` descargado de PyPI (`METADATA` dentro del `.whl`) declaran `Requires-Python: >=3.8`, confirmando el conflicto con `runtime.txt`. Las 2 pruebas del fixture pasan bajo Python 3.12 con las dependencias ancladas.
 
 ---
 

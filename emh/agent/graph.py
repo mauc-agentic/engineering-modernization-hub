@@ -67,6 +67,10 @@ class Entorno:
     ejecutor_host: EjecutorHost = _ejecutor_host_real
     fetcher: Fetcher = _fetcher_real
     max_turnos_exploracion: int = 6
+    usar_wheelhouse: bool = False
+    """True con un sandbox real (Docker/Fargate): construye el wheelhouse en
+    el host antes de verificar (ADR-005/D-6). False en pruebas con sandbox
+    simulado, para no depender de red real."""
 
 
 def _construir_meter(entorno: Entorno, solicitud, ejecucion: Ejecucion) -> PresupuestoMeter:
@@ -94,6 +98,15 @@ def _construir_contexto(entorno: Entorno, ejecucion_id: int) -> ContextoAgente:
     perfil = estrategia.command_profile()
     fuentes_decl = estrategia.official_sources(solicitud)
 
+    wheelhouse_dir = None
+    if entorno.usar_wheelhouse:
+        requirements = workspace / "requirements.txt"
+        if requirements.is_file():
+            from emh.execution.wheelhouse import construir_wheelhouse
+
+            wheelhouse_dir = workspace.parent / f"wheelhouse-{ejecucion_id}"
+            construir_wheelhouse(requirements, wheelhouse_dir)
+
     herramientas_ctx = ContextoHerramientas(
         workspace_root=workspace,
         gate=entorno.gate,
@@ -107,6 +120,7 @@ def _construir_contexto(entorno: Entorno, ejecucion_id: int) -> ContextoAgente:
         ejecutor_host=entorno.ejecutor_host,
         fetcher=entorno.fetcher,
         origen_id=ejecucion_id,
+        wheelhouse_dir=wheelhouse_dir,
     )
     return ContextoAgente(
         ejecucion_id=ejecucion_id, modelo=entorno.modelo, meter=meter, repo=entorno.repo,
@@ -422,34 +436,34 @@ def construir_grafo(entorno: Entorno):
 
         ctx = _construir_contexto(entorno, ejecucion_id)
         _avanzar(entorno, ejecucion_id, EstadoEjecucion.VERIFICANDO)
-        comandos = ctx.estrategia.command_profile().verificacion
+        perfil = ctx.estrategia.command_profile()
+        # Instalación + verificación en UN solo contenedor (el venv que crea
+        # el primer comando debe seguir ahí para el último; ADR-005 §"riesgo
+        # técnico", resuelto con wheelhouse -- D-6).
+        secuencia = perfil.instalacion + perfil.verificacion
         linea_base = _linea_base_pruebas(entorno, ejecucion_id)
 
-        ok_total = True
-        ultima_salida = ""
-        for comando in comandos:
-            r = fn_run_tests(ctx.herramientas_ctx, ArgsRunTests(comando=comando))
-            if not r.ok:
-                _finalizar(entorno, ejecucion_id, ResultadoEjecucion.BLOQUEADO, MotivoBloqueo.ACCION_BLOQUEADA)
-                return estado
-            codigo_salida = int(r.detalles[0]) if r.detalles else 0
-            totales, exitosas = _parsear_pytest(r.contenido)
-            resultado_v = ctx.gate.evaluar_verificacion(codigo_salida, totales, exitosas, linea_base)
-            entorno.repo.guardar_verificacion(
-                Verificacion(
-                    ejecucion_id=ejecucion_id, comando=" ".join(comando), codigo_salida=codigo_salida,
-                    salida_capturada=r.contenido[:4000], pruebas_totales=totales, pruebas_exitosas=exitosas,
-                    resultado=resultado_v,
-                )
+        r = fn_run_tests(ctx.herramientas_ctx, ArgsRunTests(comandos=secuencia))
+        if not r.ok:
+            _finalizar(entorno, ejecucion_id, ResultadoEjecucion.BLOQUEADO, MotivoBloqueo.ACCION_BLOQUEADA)
+            return estado
+
+        codigo_salida = int(r.detalles[0]) if r.detalles else 0
+        totales, exitosas = _parsear_pytest(r.contenido)
+        resultado_v = ctx.gate.evaluar_verificacion(codigo_salida, totales, exitosas, linea_base)
+        entorno.repo.guardar_verificacion(
+            Verificacion(
+                ejecucion_id=ejecucion_id,
+                comando=" && ".join(" ".join(c) for c in perfil.verificacion),
+                codigo_salida=codigo_salida, salida_capturada=r.contenido[:4000],
+                pruebas_totales=totales, pruebas_exitosas=exitosas, resultado=resultado_v,
             )
-            ultima_salida = r.contenido
-            if resultado_v is not ResultadoVerificacion.EXITOSA:
-                ok_total = False
+        )
 
         mensajes = estado["mensajes"] + [
-            {"role": "user", "content": [{"text": f"Salida real de verificación:\n{ultima_salida[:2000]}"}]}
+            {"role": "user", "content": [{"text": f"Salida real de verificación:\n{r.contenido[:2000]}"}]}
         ]
-        if not ok_total:
+        if resultado_v is not ResultadoVerificacion.EXITOSA:
             mensajes[-1]["content"][0]["text"] += "\n(VERIFICACIÓN FALLIDA -- analiza el error real, no supongas)"
         return {"ejecucion_id": ejecucion_id, "mensajes": mensajes}
 
@@ -459,11 +473,12 @@ def construir_grafo(entorno: Entorno):
         if ejecucion.resultado is not None:
             return "fin_directo"
 
-        n = _num_comandos(entorno, ejecucion_id)
+        # Cada intento de nodo_ejecutar_verificaciones persiste EXACTAMENTE
+        # una fila (instalación + verificación corren juntas, un contenedor);
+        # solo importa el resultado del intento más reciente.
         verificaciones = entorno.repo.listar_verificaciones(ejecucion_id)
-        ultimas = verificaciones[-n:] if len(verificaciones) >= n else verificaciones
-        todas_exitosas = bool(ultimas) and all(v.resultado is ResultadoVerificacion.EXITOSA for v in ultimas)
-        if todas_exitosas:
+        ultima_exitosa = bool(verificaciones) and verificaciones[-1].resultado is ResultadoVerificacion.EXITOSA
+        if ultima_exitosa:
             _finalizar(entorno, ejecucion_id, ResultadoEjecucion.LISTO_PARA_REVISION)
             return "exitosa"
 
@@ -548,13 +563,6 @@ def construir_grafo(entorno: Entorno):
     grafo.add_edge("construir_reporte", END)
 
     return grafo
-
-
-def _num_comandos(entorno: Entorno, ejecucion_id: int) -> int:
-    ejecucion = entorno.repo.obtener_ejecucion(ejecucion_id)
-    solicitud = entorno.repo.obtener_solicitud(ejecucion.solicitud_id)
-    estrategia = obtener_estrategia(solicitud.estrategia_id)
-    return max(1, len(estrategia.command_profile().verificacion))
 
 
 def _linea_base_pruebas(entorno: Entorno, ejecucion_id: int) -> int:

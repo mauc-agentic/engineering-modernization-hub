@@ -26,17 +26,23 @@ class SandboxSecuencial:
     """Fake de Sandbox que devuelve resultados distintos en cada llamada,
     en orden -- simula el primer intento fallido y el segundo exitoso."""
 
-    def __init__(self, resultados: list[ResultadoComando]):
-        self._resultados = list(resultados)
+    def __init__(self, resultados_pytest: list[ResultadoComando]):
+        self._resultados = list(resultados_pytest)
         self._indice = 0
 
-    def crear(self, workspace):
+    def crear(self, workspace, **kwargs):
         return f"contenedor-{self._indice}"
 
     def ejecutar(self, identificador, comando, *, con_red=False):
-        r = self._resultados[self._indice]
-        self._indice += 1
-        return r
+        # Solo el comando de verificación real (pytest) consume el guion;
+        # los pasos de instalación (venv, pip) se simulan como exitosos --
+        # no son lo que este test está verificando (eso lo cubre
+        # test_run_tests_ejecuta_instalacion_y_verificacion_en_un_solo_contenedor).
+        if any("pytest" in parte for parte in comando):
+            r = self._resultados[self._indice]
+            self._indice += 1
+            return r
+        return ResultadoComando(codigo_salida=0, salida="(paso de instalación simulado)")
 
     def destruir(self, identificador):
         pass

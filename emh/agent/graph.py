@@ -50,6 +50,11 @@ MAX_INTENTOS_VALIDACION_ALCANCE = 3  # reparación de propuestas fuera de alcanc
 class EstadoGrafo(TypedDict):
     ejecucion_id: int
     mensajes: list[dict[str, Any]]
+    archivos_relevantes: list[str]
+    """Archivos que descubrir_repo/consultar_fuentes marcaron con uso del
+    paquete objetivo (estructurado, no solo en la prosa del resumen) --
+    hallazgo en vivo: el modelo omitía uno de dos archivos afectados al
+    construir rutas_declaradas si solo dependía de recordarlo del texto."""
 
 
 @dataclass
@@ -210,20 +215,21 @@ def construir_grafo(entorno: Entorno):
                 return estado
 
         try:
-            historial, resumen = bucle_exploracion(
+            historial, resumen, archivos = bucle_exploracion(
                 ctx, "descubrir_repo", sistema=prompts.DESCUBRIR_REPO,
                 mensajes=estado["mensajes"], herramientas_permitidas=["list_files", "read_file"],
             )
         except PresupuestoAgotado:
             _finalizar(entorno, ejecucion_id, ResultadoEjecucion.PRESUPUESTO_AGOTADO)
             return estado
-        return {"ejecucion_id": ejecucion_id, "mensajes": historial}
+        previos = estado.get("archivos_relevantes", [])
+        return {"ejecucion_id": ejecucion_id, "mensajes": historial, "archivos_relevantes": list(dict.fromkeys(previos + archivos))}
 
     def nodo_consultar_fuentes(estado: EstadoGrafo) -> EstadoGrafo:
         ejecucion_id = estado["ejecucion_id"]
         ctx = _construir_contexto(entorno, ejecucion_id)
         try:
-            historial, resumen = bucle_exploracion(
+            historial, resumen, archivos = bucle_exploracion(
                 ctx, "consultar_fuentes", sistema=prompts.CONSULTAR_FUENTES,
                 mensajes=estado["mensajes"], herramientas_permitidas=["search_docs"],
             )
@@ -231,7 +237,8 @@ def construir_grafo(entorno: Entorno):
             _finalizar(entorno, ejecucion_id, ResultadoEjecucion.PRESUPUESTO_AGOTADO)
             return estado
         _avanzar(entorno, ejecucion_id, EstadoEjecucion.ANALISIS)
-        return {"ejecucion_id": ejecucion_id, "mensajes": historial}
+        previos = estado.get("archivos_relevantes", [])
+        return {"ejecucion_id": ejecucion_id, "mensajes": historial, "archivos_relevantes": list(dict.fromkeys(previos + archivos))}
 
     def nodo_evaluar_viabilidad(estado: EstadoGrafo) -> EstadoGrafo:
         ejecucion_id = estado["ejecucion_id"]
@@ -290,12 +297,17 @@ def construir_grafo(entorno: Entorno):
         ejecucion_id = estado["ejecucion_id"]
         ctx = _construir_contexto(entorno, ejecucion_id)
         plantilla = ctx.estrategia.scope_template()
+        archivos_descubiertos = estado.get("archivos_relevantes", [])
         try:
             resultado = pedir_estructurado(
                 ctx, "proponer_plan", sistema=prompts.PROPONER_PLAN,
                 mensajes=estado["mensajes"] + [{
                     "role": "user",
-                    "content": [{"text": f"Rutas permitidas por la estrategia: {plantilla.rutas}. Operaciones permitidas: {plantilla.operaciones}."}],
+                    "content": [{"text": (
+                        f"Rutas permitidas por la estrategia: {plantilla.rutas}. Operaciones permitidas: {plantilla.operaciones}. "
+                        f"El descubrimiento marcó estos archivos con uso del paquete objetivo -- incluye en "
+                        f"'rutas_declaradas' cada uno que el fix podría necesitar tocar: {archivos_descubiertos or '(ninguno adicional registrado)'}"
+                    )}],
                 }],
                 nombre_tool="plan_propuesto", descripcion_tool="Entrega el plan de modernización",
                 json_schema={
@@ -318,13 +330,19 @@ def construir_grafo(entorno: Entorno):
 
         # Las rutas del plan quedan confinadas a lo que la estrategia autoriza
         # (06-estrategias.md): el manifiesto siempre entra; los módulos que
-        # el modelo declara afectados por el cambio (además del manifiesto)
-        # se registran explícitamente vía plan_hint, y son EXACTAMENTE lo
-        # que queda en rutas_declaradas -- nada añadido fuera de ese conjunto.
-        # Esto NO es el control 7 (que valida el parche final aplicado);
-        # es la plantilla acotando la PROPUESTA. El límite de seguridad real
-        # es la aprobación humana (RN-01) más el control 7 sobre el parche.
-        modulos_declarados = [r for r in resultado["rutas_declaradas"] if r not in plantilla.rutas]
+        # el modelo declara afectados (o que el descubrimiento ya marcó
+        # estructuradamente -- hallazgo en vivo: el modelo no siempre repite
+        # en el plan lo que ya encontró tres turnos antes) se registran vía
+        # plan_hint, y son EXACTAMENTE lo que queda en rutas_declaradas --
+        # nada añadido fuera de ese conjunto. Esto NO es el control 7 (que
+        # valida el parche final aplicado); es la plantilla acotando la
+        # PROPUESTA. El límite de seguridad real es la aprobación humana
+        # (RN-01) más el control 7 sobre el parche -- ampliar la propuesta
+        # nunca reduce lo que el humano revisa antes de aprobar.
+        modulos_declarados = sorted(set(
+            [r for r in resultado["rutas_declaradas"] if r not in plantilla.rutas]
+            + [r for r in archivos_descubiertos if r not in plantilla.rutas]
+        ))
         plantilla = ctx.estrategia.scope_template({"modulos_afectados": modulos_declarados})
         rutas = [r for r in resultado["rutas_declaradas"] if r in plantilla.rutas] or plantilla.rutas
         comandos_verif = ctx.estrategia.command_profile().verificacion

@@ -23,7 +23,8 @@ class LangGraphAgentRunner:
 
     def run(self, ejecucion_id: int) -> None:
         self._grafo.invoke(
-            {"ejecucion_id": ejecucion_id, "mensajes": []}, config=self._config(ejecucion_id)
+            {"ejecucion_id": ejecucion_id, "mensajes": [], "archivos_relevantes": []},
+            config=self._config(ejecucion_id),
         )
 
     def resume(self, ejecucion_id: int) -> None:

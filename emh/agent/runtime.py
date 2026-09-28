@@ -157,7 +157,22 @@ def _tool_specs_harness(nombres: list[str]) -> list[dict[str, Any]]:
         _tool_spec(
             HERRAMIENTA_TERMINAR,
             "Indica que ya tienes información suficiente y terminas esta fase.",
-            {"type": "object", "properties": {"resumen": {"type": "string"}}, "required": ["resumen"]},
+            {
+                "type": "object",
+                "properties": {
+                    "resumen": {"type": "string"},
+                    "archivos_relevantes": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": (
+                            "Ruta de CADA archivo de código donde encontraste un uso del "
+                            "paquete/objeto de la modernización (no solo el manifiesto). "
+                            "Lista exhaustiva, no solo el primero que recuerdes -- el plan "
+                            "solo podrá tocar los archivos que aparezcan aquí."
+                        ),
+                    },
+                },
+                "required": ["resumen"],
+            },
         )
     )
     return specs
@@ -171,7 +186,7 @@ def bucle_exploracion(
     mensajes: list[dict[str, Any]],
     herramientas_permitidas: list[str],
     nivel_esfuerzo: str = "low",
-) -> tuple[list[dict[str, Any]], str]:
+) -> tuple[list[dict[str, Any]], str, list[str]]:
     """Varias idas y vueltas modelo↔herramientas reales del harness, hasta
     que el modelo llama a `listo` o se agota `max_turnos_exploracion`
     (control 4, indirectamente: cada turno pasa por `llamar_modelo`)."""
@@ -189,7 +204,7 @@ def bucle_exploracion(
         if not respuesta.llamadas_herramienta:
             if respuesta.texto:
                 historial.append({"role": "assistant", "content": [{"text": respuesta.texto}]})
-            return historial, respuesta.texto or ""
+            return historial, respuesta.texto or "", []
 
         contenido_asistente: list[dict[str, Any]] = []
         if respuesta.texto:
@@ -200,9 +215,11 @@ def bucle_exploracion(
 
         resultados_tool: list[dict[str, Any]] = []
         resumen_final: str | None = None
+        archivos_relevantes: list[str] = []
         for lh in respuesta.llamadas_herramienta:
             if lh.nombre == HERRAMIENTA_TERMINAR:
                 resumen_final = lh.argumentos.get("resumen", "")
+                archivos_relevantes = list(lh.argumentos.get("archivos_relevantes", []))
                 resultados_tool.append(
                     {"toolResult": {"toolUseId": lh.id, "content": [{"text": "exploración terminada"}]}}
                 )
@@ -234,6 +251,6 @@ def bucle_exploracion(
 
         historial.append({"role": "user", "content": resultados_tool})
         if resumen_final is not None:
-            return historial, resumen_final
+            return historial, resumen_final, archivos_relevantes
 
-    return historial, "(límite de turnos de exploración alcanzado)"
+    return historial, "(límite de turnos de exploración alcanzado)", []

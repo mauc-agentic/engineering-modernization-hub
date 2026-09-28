@@ -155,6 +155,7 @@ def test_apply_patch_fuera_de_alcance_bloqueado(ctx, eventos):
     r = apply_patch(ctx, args, operaciones_permitidas=["modificar"])
     assert not r.ok
     assert eventos[0].regla == "control_07_validacion_alcance"
+    assert ".env.example" in eventos[0].accion_intentada  # NFR-013: detalle persistido, no solo el motivo genérico
     assert not (ctx.workspace_root / ".env.example").exists()
 
 

@@ -65,9 +65,13 @@ class ContextoHerramientas:
 
 
 def _denegar(ctx: ContextoHerramientas, regla: str, motivo: str, origen: OrigenEvento, detalles: list[str] | None = None) -> ResultadoHerramienta:
+    # NFR-013: el evento persistido lleva el detalle completo (qué ruta u
+    # operación se intentó), no solo el motivo genérico -- si no, el reporte
+    # y la auditoría no pueden distinguir un intento de otro.
+    accion = motivo if not detalles else f"{motivo}: " + "; ".join(detalles)
     ctx.registrar_evento(
         EventoSeguridad(
-            ejecucion_id=ctx.origen_id, regla=regla, accion_intentada=motivo,
+            ejecucion_id=ctx.origen_id, regla=regla, accion_intentada=accion,
             origen=origen, severidad=SeveridadEvento.CRITICA,
         )
     )

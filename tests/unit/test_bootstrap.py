@@ -38,8 +38,26 @@ def test_env_aws_usa_postgres_y_fargate_sin_tocar_el_nucleo(tmp_path, monkeypatc
         def __init__(self, **kw):
             capturado["fargate"] = kw
 
+    import langgraph.checkpoint.postgres as cp
+    import psycopg_pool
+    from langgraph.checkpoint.memory import MemorySaver
+
+    class PoolFalso:
+        def __init__(self, dsn, **kw):
+            capturado["pool_dsn"], capturado["pool_kw"] = dsn, kw
+
+    class SaverFalso(MemorySaver):
+        def __init__(self, pool):
+            super().__init__()
+            capturado["saver_sobre_pool"] = isinstance(pool, PoolFalso)
+
+        def setup(self):
+            capturado["setup"] = True
+
     monkeypatch.setattr(pg, "PostgresRunRepository", PgFalso)
     monkeypatch.setattr(fs, "FargateSandbox", FargateFalso)
+    monkeypatch.setattr(psycopg_pool, "ConnectionPool", PoolFalso)
+    monkeypatch.setattr(cp, "PostgresSaver", SaverFalso)
     for k, v in {
         "EMH_ENV": "aws", "EMH_DB_HOST": "db.interna", "EMH_DB_NAME": "emh", "EMH_DB_USER": "emh_app",
         "EMH_DB_PASSWORD": "p@ss/word", "EMH_ECS_CLUSTER": "c", "EMH_SANDBOX_TASK_DEFINITION": "td",
@@ -51,6 +69,8 @@ def test_env_aws_usa_postgres_y_fargate_sin_tocar_el_nucleo(tmp_path, monkeypatc
     assert capturado["dsn"] == "postgresql://emh_app:p%40ss%2Fword@db.interna:5432/emh?sslmode=require"
     assert capturado["fargate"]["subredes"] == ["s1", "s2"]
     assert capturado["fargate"]["bucket"] == "b"
+    # La memoria de trabajo del agente también es persistente, en el MISMO RDS (FR-020)
+    assert capturado["pool_dsn"] == capturado["dsn"] and capturado["saver_sobre_pool"] and capturado["setup"]
 
 
 def test_env_aws_sin_variable_obligatoria_falla_con_mensaje_claro(tmp_path, monkeypatch):

@@ -7,8 +7,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from langgraph.checkpoint.memory import MemorySaver
-
 from emh.agent.graph import Entorno
 from emh.agent.runner import LangGraphAgentRunner
 from emh.core.ports import ModelPort, RunRepository, Sandbox
@@ -54,7 +52,9 @@ class Aplicacion:
             workspace_root_para=self._workspace_root_para,
             usar_wheelhouse=True,  # sandbox real (Docker o Fargate): instalar sin red externa (ADR-005/D-6)
         )
-        self.runner = LangGraphAgentRunner(self.entorno, checkpointer=MemorySaver())
+        # Memoria de trabajo del agente PERSISTENTE (FR-020): si el proceso se reinicia con una ejecución
+        # esperando aprobación, `resume()` la retoma desde donde quedó.
+        self.runner = LangGraphAgentRunner(self.entorno, checkpointer=self._construir_checkpointer())
         self.reporte = ReportRenderer(self.repo, modelo=self.modelo)
 
     @staticmethod
@@ -67,16 +67,41 @@ class Aplicacion:
     def _construir_repositorio(self) -> RunRepository:
         if self.entorno_despliegue == "local":
             return SqliteRunRepository(self.data_dir / "emh.db")
-        from urllib.parse import quote
-
         from emh.persistence.postgres_repo import PostgresRunRepository
 
+        return PostgresRunRepository(self._dsn_postgres())
+
+    def _dsn_postgres(self) -> str:
+        from urllib.parse import quote
+
         v = self._variable
-        dsn = (
+        return (
             f"postgresql://{quote(v('EMH_DB_USER'), safe='')}:{quote(v('EMH_DB_PASSWORD'), safe='')}"
-            f"@{v('EMH_DB_HOST')}:{os.environ.get('EMH_DB_PORT', '5432')}/{v('EMH_DB_NAME')}?sslmode={os.environ.get('EMH_DB_SSLMODE', 'require')}"
+            f"@{v('EMH_DB_HOST')}:{os.environ.get('EMH_DB_PORT', '5432')}/{v('EMH_DB_NAME')}"
+            f"?sslmode={os.environ.get('EMH_DB_SSLMODE', 'require')}"
         )
-        return PostgresRunRepository(dsn)
+
+    def _construir_checkpointer(self):
+        """SQLite (archivo junto a la base) en local; Postgres (mismo RDS) en la nube."""
+        if self.entorno_despliegue == "local":
+            import sqlite3
+
+            from langgraph.checkpoint.sqlite import SqliteSaver
+
+            saver = SqliteSaver(sqlite3.connect(self.data_dir / "checkpoints.db", check_same_thread=False))
+            saver.setup()
+            return saver
+        from langgraph.checkpoint.postgres import PostgresSaver
+        from psycopg.rows import dict_row
+        from psycopg_pool import ConnectionPool
+
+        pool = ConnectionPool(
+            self._dsn_postgres(), min_size=1, max_size=5, open=True,
+            kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
+        )
+        saver = PostgresSaver(pool)
+        saver.setup()
+        return saver
 
     def _workspace_root_para(self, ejecucion_id: int) -> Path:
         ws = self.data_dir / "workspaces" / str(ejecucion_id)

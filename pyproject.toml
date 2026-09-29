@@ -26,7 +26,7 @@ dev = [
     "ruff>=0.7",
     "opentelemetry-sdk>=1.27",
 ]
-postgres = ["psycopg[binary]>=3.2"]
+postgres = ["psycopg[binary]>=3.2", "psycopg-pool>=3.2", "langgraph-checkpoint-postgres>=3.0"]
 observabilidad = ["aws-opentelemetry-distro>=0.18.0"]  # ADOT: telemetría a CloudWatch / AgentCore Observability
 
 [build-system]
@@ -91,6 +91,8 @@ select = ["E4", "E7", "E9", "F", "I", "UP", "B", "S"]
 "emh/strategies/python_dependency_upgrade.py" = ["S108"]
 "emh/execution/docker_sandbox.py" = ["S108"]
 "sandbox/entrypoint.py" = ["S108", "S603"]
+# `git` sin shell y con lista de argumentos fija; el rango viene del CI, no de contenido no confiable.
+"scripts/verificar_commits.py" = ["S603", "S607"]
 # subprocess SIN shell y con lista de argumentos ya validada por la política (allowlist, control 2).
 "emh/execution/wheelhouse.py" = ["S603"]
 "emh/harness/tools.py" = ["S603"]

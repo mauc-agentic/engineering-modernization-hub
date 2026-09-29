@@ -242,7 +242,11 @@ def construir_grafo(entorno: Entorno):
         ctx = _construir_contexto(entorno, ejecucion_id)
         try:
             historial, resumen, archivos = bucle_exploracion(
-                ctx, "consultar_fuentes", sistema=prompts.CONSULTAR_FUENTES,
+                ctx, "consultar_fuentes",
+                sistema=prompts.CONSULTAR_FUENTES + (
+                    "\n\nDominios permitidos (los demás se bloquean y quedan registrados como "
+                    "evento de seguridad): " + ", ".join(ctx.herramientas_ctx.dominios_fuente_permitidos)
+                ),
                 mensajes=estado["mensajes"], herramientas_permitidas=["search_docs"],
             )
         except PresupuestoAgotado:

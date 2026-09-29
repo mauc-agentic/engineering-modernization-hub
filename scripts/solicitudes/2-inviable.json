@@ -1,0 +1,12 @@
+{
+  "repositorio_url": "https://github.com/mauc-agentic/orders-api",
+  "commit_referencia": "5e60dabbd00074d9da88ae422a8d6d778733e9ec",
+  "estrategia_id": "python_dependency_upgrade",
+  "objetivo": "Actualizar Flask de 2.0.3 a 3.0.x",
+  "version_esperada": "Flask==3.0.0",
+  "restricciones": "El runtime en producción está fijado a Python 3.7 (runtime.txt); no se puede cambiar.",
+  "limite_tiempo_segundos": 720,
+  "limite_iteraciones": 3,
+  "limite_costo_usd": 1.0,
+  "solicitante": "dev:tu-correo@example.com"
+}

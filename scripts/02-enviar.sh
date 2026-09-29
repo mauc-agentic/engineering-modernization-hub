@@ -3,7 +3,7 @@
 # Registra la solicitud y espera al análisis + plan (o al resultado final).
 set -euo pipefail
 cd "$(dirname "$0")"
-B=localhost:8000
+B=${EMH_API:-localhost:8000}   # en AWS: export EMH_API=$(scripts/nube-url.sh)
 F=$(ls solicitudes/$1-*.json)
 R=$(curl -s -X POST $B/solicitudes -H "Content-Type: application/json" -d @"$F")
 ID=$(echo "$R" | python3 -c "import sys,json;print(json.load(sys.stdin)['ejecucion_id'])")

@@ -3,6 +3,10 @@
 
 email_alertas_presupuesto = "tu-correo@example.com"
 
+# Tu IP pública (curl https://checkip.amazonaws.com). La API no tiene
+# autenticación en F1 (RN-14): nunca 0.0.0.0/0 (Terraform lo rechaza).
+cidr_acceso_api = ["203.0.113.7/32"]
+
 # Valores por defecto ya alineados con las decisiones de ADR-006/ADR-007;
 # normalmente no hace falta tocarlos:
 # region                  = "us-east-1"

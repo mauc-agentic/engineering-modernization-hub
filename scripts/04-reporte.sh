@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Uso: scripts/04-reporte.sh <ejecucion_id>   -> verificaciones, eventos y reporte
 set -euo pipefail
-B=localhost:8000; ID=$1
+B=${EMH_API:-localhost:8000}; ID=$1
 echo "=== Verificaciones (salida real capturada)"
 curl -s $B/ejecuciones/$ID/verificaciones | python3 -c "
 import sys,json

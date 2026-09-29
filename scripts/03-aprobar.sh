@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Uso: scripts/03-aprobar.sh <ejecucion_id> [APROBADO|RECHAZADO]
 set -euo pipefail
-B=localhost:8000; ID=$1; DEC=${2:-APROBADO}
+B=${EMH_API:-localhost:8000}; ID=$1; DEC=${2:-APROBADO}
 P=$(curl -s $B/ejecuciones/$ID/plan)
 PID=$(echo "$P" | python3 -c "import sys,json;print(json.load(sys.stdin)['plan_id'])")
 H=$(echo "$P" | python3 -c "import sys,json;print(json.load(sys.stdin)['hash'])")

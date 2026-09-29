@@ -34,6 +34,7 @@ class S3Falso:
         self.objetos.pop(Key, None)
 
     def generate_presigned_url(self, op, Params, ExpiresIn):
+        self.firmas = getattr(self, "firmas", []) + [(op, dict(Params))]
         return f"https://s3.falso/{Params['Key']}?op={op}&exp={ExpiresIn}"
 
 
@@ -165,3 +166,25 @@ def test_si_la_tarea_excede_el_tiempo_se_detiene(tmp_path):
     with pytest.raises(ErrorSandboxNube, match="excedió"):
         sb.ejecutar_secuencia(jid, [["echo", "x"]])
     assert ecs.detenidas
+
+
+def test_la_url_de_salida_firma_el_content_type_que_envia_el_ejecutor(tmp_path):
+    """Regresión hallazgo #13 (primer despliegue real): el PUT del resultado
+    daba 403 porque el Content-Type no coincidía con lo firmado."""
+    sb, s3, _ = _sandbox(tmp_path)
+    jid = sb.crear(_workspace(tmp_path))
+    sb.ejecutar_secuencia(jid, [["echo", "x"]])
+    put = next(p for op, p in s3.firmas if op == "put_object")
+    assert put["ContentType"] == "application/json"
+    fuente = (Path(__file__).resolve().parents[2] / "sandbox" / "entrypoint.py").read_text()
+    assert '"Content-Type": "application/json"' in fuente
+
+
+def test_el_cliente_s3_real_firma_con_sigv4(tmp_path, monkeypatch):
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIAEXAMPLE")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "secreto")
+    sb = FargateSandbox(cluster="c", task_definition="td", subredes=["s"], security_group="sg",
+                        bucket="b", region="us-east-1", ecs=object())
+    url = sb._s3.generate_presigned_url("put_object", Params={"Bucket": "b", "Key": "k", "ContentType": "application/json"}, ExpiresIn=60)
+    assert "X-Amz-Algorithm=AWS4-HMAC-SHA256" in url
+    assert "AWSAccessKeyId=" not in url  # sería SigV2

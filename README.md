@@ -166,14 +166,36 @@ DOCS/            especificación, ADRs, documento ejecutivo y guion del video
 - Adaptadores de nube (`PostgresRunRepository`, `FargateSandbox`, `EMH_ENV=aws`): diseñados, **no implementados** (ver más abajo).
 - La identidad del aprobador en F1 no está autenticada: se acepta el campo `aprobador` declarado por quien llama a la API (ver `DOCS/07-seguridad.md` §2, resuelto en F2 con SSO — `FR-039`).
 
-## Infraestructura en AWS (solo IaC validada, ADR-006/ADR-007)
+## Despliegue en AWS (Terraform, ADR-006/ADR-007)
 
-> **Alcance honesto:** solo la infraestructura como código está entregada y validada (`terraform validate` + `terraform plan`, 33 recursos). Los adaptadores de nube (`PostgresRunRepository`, `FargateSandbox`, `EMH_ENV=aws`) **no están implementados**: hoy la API corre con Docker + SQLite (local). Aplicar `terraform apply` crearía la infraestructura, pero la aplicación no correría sobre ella hasta implementar esos adaptadores (F2). No se ejecutó `apply`; no hay recursos facturables.
+`EMH_ENV=aws` cambia los dos adaptadores sin tocar el núcleo: **RDS Postgres**
+en vez de SQLite y una **tarea Fargate efímera** en vez de Docker (el trabajo
+viaja por S3 con URLs prefirmadas; ver ADR-006). Recursos: VPC pública sin NAT,
+ECR, ECS Fargate ARM64 (API + sandbox), RDS `db.t4g.micro`, bucket S3 con
+expiración, SSM, roles de mínimo privilegio y alertas de presupuesto.
+Costo del ejercicio: unos pocos dólares (RDS y Fargate cobran por hora).
 
 ```bash
 cd infra
+cp terraform.tfvars.example terraform.tfvars   # tu correo y TU IP: cidr_acceso_api = ["x.x.x.x/32"]
 terraform init
-terraform plan -var="email_alertas_presupuesto=tu-correo@example.com"   # 33 recursos a crear
-# Solo si algún día se implementan los adaptadores: terraform apply, y
-# terraform destroy al terminar (RDS cobra por hora).
+
+# 1) Solo los repositorios de imágenes (ECS no debe arrancar una imagen inexistente)
+terraform plan  -out=ecr.tfplan -target=aws_ecr_repository.api -target=aws_ecr_repository.sandbox
+terraform apply ecr.tfplan
+../scripts/nube-publicar-imagenes.sh            # build ARM64 + push a ECR
+
+# 2) Todo lo demás (revisa el plan antes de aplicar)
+terraform plan  -out=completo.tfplan
+terraform apply completo.tfplan
+
+# 3) Usar la API desplegada
+export EMH_API=$(../scripts/nube-url.sh)        # la tarea no tiene balanceador: IP pública directa
+../scripts/02-enviar.sh 1                       # y el resto del kit de demo, igual que en local
+
+terraform destroy                               # IMPORTANTE al terminar: RDS y Fargate cobran por hora
 ```
+
+La API no tiene autenticación en F1 (RN-14): el grupo de seguridad solo admite
+tu IP y Terraform rechaza `0.0.0.0/0`. Si cambias de red, actualiza
+`cidr_acceso_api` y vuelve a aplicar.

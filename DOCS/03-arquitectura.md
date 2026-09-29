@@ -316,19 +316,19 @@ Los **invariantes** de seguridad (NFR-001, NFR-003, NFR-006) se verifican en amb
 
 ## 9. Despliegue en la nube (D-9, `ADR-006`, `ADR-007`)
 
-> **Estado real (2026-09-29): el código de F1 implementa solo los adaptadores **locales** (`DockerSandbox` + `SqliteRunRepository`); `PostgresRunRepository`, `FargateSandbox` y la selección por `EMH_ENV` están **diseñados pero NO implementados** (NOT IMPLEMENTED). Lo entregado y verificado de la parte de nube es la infraestructura como código: `terraform validate` y `terraform plan` reales contra la cuenta AWS (33 recursos a crear), sin `terraform apply`.**
+> **Estado (2026-09-29):** los dos adaptadores de nube están **implementados y probados** en `tests/`; la selección por `EMH_ENV` vive en `emh/bootstrap.py`. Ningún archivo de `emh/core` ni `emh/agent` cambió para admitirlos, salvo un método opcional del puerto `Sandbox` (`ejecutar_secuencia`). El despliegue en AWS y su verificación de extremo a extremo se documentan en `ADR-006`.
 
-Diseño (promovido de F2 a F1, con la parte de código pendiente). El despliegue **no** reemplaza el camino local: es un segundo adaptador de los mismos dos puertos que ya existían, seleccionado por una variable de entorno (`EMH_ENV=local|aws`) en `emh/bootstrap.py`. Esto es, en sí mismo, la prueba en producción de NFR-016 (portabilidad): si el diseño de puertos fuera solo teórico, este cambio habría exigido tocar el núcleo; no lo exige.
+El despliegue **no** reemplaza el camino local: es un segundo adaptador de los mismos dos puertos que ya existían, seleccionado por una variable de entorno (`EMH_ENV=local|aws`). Esto es, en sí mismo, la prueba de NFR-016 (portabilidad) sobre código real: `import-linter` sigue verde y el núcleo no importa ningún adaptador.
 
 ```
-EMH_ENV=local   → DockerSandbox + SQLiteRunRepository   (IMPLEMENTADO: dev, CI, demo en vivo)
-EMH_ENV=aws     → FargateSandbox + PostgresRunRepository (DISEÑADO, no implementado)
+EMH_ENV=local   → DockerSandbox + SQLiteRunRepository   (dev, CI, respaldo de la demo en vivo)
+EMH_ENV=aws     → FargateSandbox + PostgresRunRepository (despliegue en la nube)
 ```
 
 | Elemento | Adaptador de nube | Reemplaza a |
 |---|---|---|
-| `Sandbox` | `FargateSandbox` (`boto3` ECS `run_task`, una tarea efímera por ejecución) | `DockerSandbox` |
-| `RunRepository` | `PostgresRunRepository` (`psycopg`, mismo esquema de `02-modelo-entidades.md`) | `SqliteRunRepository` |
+| `Sandbox` | `FargateSandbox`: una tarea efímera por verificación; el trabajo (workspace + wheelhouse + comandos) viaja por S3 con URLs prefirmadas de un solo objeto, porque el rol de la tarea es vacío (`ADR-006`) | `DockerSandbox` |
+| `RunRepository` | `PostgresRunRepository` (`psycopg`): reutiliza toda la lógica SQL del adaptador SQLite y deriva su esquema de `schema.sql`; ambos pasan las mismas 18 pruebas de contrato | `SqliteRunRepository` |
 | Infraestructura | Terraform (`infra/`), *provider* `hashicorp/aws ~> 6.66`: VPC de una subred pública (sin NAT), ECS Fargate (API + tarea de sandbox), RDS `db.t4g.micro`, SSM Parameter Store, AWS Budgets | — |
 
 Decisiones de costo (ECS/Fargate sin balanceador ni NAT, RDS de instancia simple frente a DynamoDB/Aurora Serverless v2, SSM frente a Secrets Manager) y su justificación completa están en `ADR-006` y `ADR-007`, no se repiten aquí. El camino local sigue siendo el que se usa para las pruebas de nivel A/CI (correr contra AWS en cada prueba no tiene sentido de costo ni de velocidad) y el respaldo si el despliegue de nube tuviera algún problema durante la sustentación en vivo (C-011).

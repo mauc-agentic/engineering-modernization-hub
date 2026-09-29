@@ -22,6 +22,7 @@ from pathlib import Path
 from emh.core.ports import ResultadoComando
 
 CADUCIDAD_URL_SEGUNDOS = 1800
+TIPO_CONTENIDO_RESULTADO = "application/json"  # firmado en la URL; el ejecutor debe enviarlo igual
 TIEMPO_MAXIMO_TAREA_SEGUNDOS = 900
 INTERVALO_SONDEO_SEGUNDOS = 5
 
@@ -55,8 +56,12 @@ class FargateSandbox:
     ) -> None:
         if s3 is None or ecs is None:
             import boto3
+            from botocore.config import Config
 
-            s3 = s3 or boto3.client("s3", region_name=region)
+            # SigV4 explícito: sin él boto3 puede firmar con SigV2, donde el
+            # Content-Type del PUT entra en la firma y S3 responde 403 (hallazgo
+            # en el primer despliegue real, #13).
+            s3 = s3 or boto3.client("s3", region_name=region, config=Config(signature_version="s3v4"))
             ecs = ecs or boto3.client("ecs", region_name=region)
         self._s3, self._ecs = s3, ecs
         self._cluster, self._task_definition = cluster, task_definition
@@ -90,7 +95,9 @@ class FargateSandbox:
             "get_object", Params={"Bucket": self._bucket, "Key": clave_in}, ExpiresIn=CADUCIDAD_URL_SEGUNDOS
         )
         url_out = self._s3.generate_presigned_url(
-            "put_object", Params={"Bucket": self._bucket, "Key": clave_out}, ExpiresIn=CADUCIDAD_URL_SEGUNDOS
+            "put_object",
+            Params={"Bucket": self._bucket, "Key": clave_out, "ContentType": TIPO_CONTENIDO_RESULTADO},
+            ExpiresIn=CADUCIDAD_URL_SEGUNDOS,
         )
 
         resp = self._ecs.run_task(

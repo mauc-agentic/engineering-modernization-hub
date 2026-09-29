@@ -101,7 +101,8 @@ def main() -> int:
     resultados = ejecutar_comandos(comandos, workspace, home)
 
     peticion = urllib.request.Request(
-        url_salida, data=json.dumps({"resultados": resultados}).encode("utf-8"), method="PUT"
+        url_salida, data=json.dumps({"resultados": resultados}).encode("utf-8"), method="PUT",
+        headers={"Content-Type": "application/json"},  # el mismo que firmó la API
     )
     with urllib.request.urlopen(peticion, timeout=120):
         pass

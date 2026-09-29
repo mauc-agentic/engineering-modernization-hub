@@ -206,6 +206,13 @@ def _finalizar(entorno: Entorno, ejecucion_id: int, resultado: ResultadoEjecucio
     _avanzar(entorno, ejecucion_id, EstadoEjecucion.FINALIZADA, resultado=resultado, motivo_bloqueo=motivo)
 
 
+def _ya_finalizada(entorno: Entorno, ejecucion_id: int) -> bool:
+    """Las aristas del grafo son incondicionales: si un nodo anterior ya cerró
+    la ejecución (presupuesto agotado, clonado fallido...), los siguientes no
+    deben correr, y menos con el historial vacío (hallazgo en AWS, #14)."""
+    return entorno.repo.obtener_ejecucion(ejecucion_id).resultado is not None
+
+
 def _hash_plan(pasos: list[str], rutas: list[str], comandos: list[list[str]]) -> str:
     payload = json.dumps({"pasos": pasos, "rutas": rutas, "comandos": comandos}, sort_keys=True)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
@@ -237,16 +244,22 @@ def construir_grafo(entorno: Entorno):
             _finalizar(entorno, ejecucion_id, ResultadoEjecucion.PRESUPUESTO_AGOTADO)
             return estado
         except ErrorSalidaModelo:
-            _finalizar(entorno, ejecucion_id, ResultadoEjecucion.FALLIDO_CONTROLADO)
-            return estado
+            # Normalizar el objetivo es una comodidad, no un control: si el modelo
+            # no entrega la herramienta (con texto sospechoso a veces responde en
+            # prosa), se sigue con el objetivo tal cual, que ya es contenido no
+            # confiable para todo el resto del flujo (hallazgo en AWS, #14).
+            resultado = {}
 
+        objetivo = resultado.get("objetivo_normalizado") or solicitud.objetivo
         mensajes = estado["mensajes"] + [
-            {"role": "user", "content": [{"text": f"Objetivo normalizado: {resultado.get('objetivo_normalizado', solicitud.objetivo)}"}]}
+            {"role": "user", "content": [{"text": f"Objetivo normalizado: {objetivo}"}]}
         ]
         return {"ejecucion_id": ejecucion_id, "mensajes": mensajes}
 
     def nodo_descubrir_repo(estado: EstadoGrafo) -> EstadoGrafo:
         ejecucion_id = estado["ejecucion_id"]
+        if _ya_finalizada(entorno, ejecucion_id):
+            return estado
         ctx = _construir_contexto(entorno, ejecucion_id)
 
         # Clonar es mecánico (repo/commit ya vienen en la Solicitud), no una
@@ -282,6 +295,8 @@ def construir_grafo(entorno: Entorno):
 
     def nodo_consultar_fuentes(estado: EstadoGrafo) -> EstadoGrafo:
         ejecucion_id = estado["ejecucion_id"]
+        if _ya_finalizada(entorno, ejecucion_id):
+            return estado
         ctx = _construir_contexto(entorno, ejecucion_id)
         mensajes_entrada = _con_evidencia_de_sondas(entorno, ctx, ejecucion_id, estado["mensajes"])
         try:
@@ -302,6 +317,8 @@ def construir_grafo(entorno: Entorno):
 
     def nodo_evaluar_viabilidad(estado: EstadoGrafo) -> EstadoGrafo:
         ejecucion_id = estado["ejecucion_id"]
+        if _ya_finalizada(entorno, ejecucion_id):
+            return estado
         ctx = _construir_contexto(entorno, ejecucion_id)
         try:
             resultado = pedir_estructurado(

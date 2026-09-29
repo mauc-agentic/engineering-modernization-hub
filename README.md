@@ -142,6 +142,8 @@ infra/           Terraform (despliegue en AWS, ADR-006/ADR-007)
 
 ## Despliegue en AWS (opcional, ADR-006/ADR-007)
 
+> **Alcance honesto:** solo la infraestructura como código está entregada y validada (`terraform validate` + `terraform plan`, 33 recursos). Los adaptadores de nube (`PostgresRunRepository`, `FargateSandbox`, `EMH_ENV=aws`) **no están implementados**: hoy la API corre con Docker + SQLite (local). Aplicar `terraform apply` crearía la infraestructura, pero la aplicación no correría sobre ella hasta implementar esos adaptadores (F2).
+
 ```bash
 cd infra
 terraform init

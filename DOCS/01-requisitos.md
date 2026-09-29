@@ -52,7 +52,7 @@
 | FR-024 | Registrar una estrategia nueva | Como operador de plataforma, quiero registrar una estrategia de modernización nueva mediante la interfaz común, sin modificar el núcleo, para ampliar la plataforma a otros tipos de modernización. | High | F1 | Open |
 | FR-025 | Modernizar una dependencia Python | Como desarrollador, quiero que la plataforma actualice una dependencia Python de extremo a extremo (estrategia de referencia) para comprobar el flujo completo con un caso real. | High | F1 | Open |
 | FR-026 | Ejecutar los escenarios obligatorios | Como desarrollador evaluador, quiero ejecutar los cuatro escenarios obligatorios como pruebas automatizadas reproducibles en vivo para verificar el comportamiento sin depender de una demostración manual. | High | F1 | Open |
-| FR-038 | Despliegue en AWS con Terraform *(promovido de F2 a F1 por D-9 de `00-vision.md`, 2026-09-28)* | Como operador de plataforma, quiero desplegar el Hub como infraestructura como código para reproducir y auditar el entorno, con disciplina de costo verificable sobre el crédito disponible. | High | F1 | Open |
+| FR-038 | Despliegue en AWS con Terraform *(promovido de F2 a F1 por D-9 de `00-vision.md`, 2026-09-28)* | Como operador de plataforma, quiero desplegar el Hub como infraestructura como código para reproducir y auditar el entorno, con disciplina de costo verificable sobre el crédito disponible. | High | F1 | Partial (IaC validada con plan; sin apply ni adaptadores de nube) |
 | FR-040 | Ejecutar con sandbox y persistencia en la nube | Como operador de plataforma, quiero que `Sandbox` y `RunRepository` tengan un adaptador de nube (Fargate, RDS) intercambiable con el local por configuración, para correr la demo en AWS sin modificar el núcleo. | High | F1 | Open |
 
 ### Fase 2 — solo diseño (se documenta, no se implementa)
@@ -103,7 +103,7 @@ Todos son medibles y tienen una prueba de pasa o no pasa.
 | NFR-022 | Commits trazables | El 100 % de los commits de implementación referencia un ID de este catálogo en su mensaje (p. ej. `FR-013:`), verificado por un hook de `commit-msg`. | Maintainability | Medium | Open |
 | NFR-023 | Guardarraíl de costo en la nube | Un `aws_budgets_budget` alerta a USD 20, 50 y 80 de los USD 100 de crédito disponibles; el costo total proyectado del ejercicio completo (infraestructura + inferencia) no supera USD 15 (estimado ≈ USD 6, `ADR-006`). | Cost | High | Open |
 | NFR-024 | Sin costo fijo olvidable | La arquitectura de nube tiene 0 recursos de costo fijo por hora que no sean RDS (NAT Gateway y balanceador de carga quedan excluidos por diseño, `ADR-006`); `terraform destroy` dejando la cuenta en 0 recursos facturables se verifica tras cada sustentación de prueba. | Cost | High | Open |
-| NFR-025 | Portabilidad local/nube | `Sandbox` y `RunRepository` tienen un adaptador local y uno de nube intercambiables por una sola variable de configuración (`EMH_ENV`), sin condicionales de entorno dentro de `emh/core` ni `emh/agent`. | Portability | High | Open |
+| NFR-025 | Portabilidad local/nube | `Sandbox` y `RunRepository` tienen un adaptador local y uno de nube intercambiables por una sola variable de configuración (`EMH_ENV`), sin condicionales de entorno dentro de `emh/core` ni `emh/agent`. | Portability | High | Partial (puertos verificados por import-linter; adaptador de nube pendiente) |
 
 ---
 

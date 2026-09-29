@@ -1,6 +1,6 @@
 # ADR-006 — Despliegue en AWS con Terraform (cómputo y red)
 
-**Estado:** Aceptado — 2026-09-28. Promueve FR-038 de diseño de F2 a **implementado en F1** (decisión D-9 de `00-vision.md`).
+**Estado:** Aceptado — 2026-09-28. Promueve FR-038 a F1 (decisión D-9 de `00-vision.md`). **Actualización 2026-09-29:** la IaC está implementada y validada con `terraform plan`; no se aplicó (sin `apply`) porque los adaptadores de nube (`FargateSandbox`, `PostgresRunRepository`) no se implementaron; pasan a F2. Se decidió con el autor no gastar crédito en una infraestructura sin aplicación funcional encima.
 
 ## Contexto
 

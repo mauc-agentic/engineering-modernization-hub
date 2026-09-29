@@ -316,11 +316,13 @@ Los **invariantes** de seguridad (NFR-001, NFR-003, NFR-006) se verifican en amb
 
 ## 9. Despliegue en la nube (D-9, `ADR-006`, `ADR-007`)
 
-Promovido de diseño de F2 a implementación de F1. El despliegue **no** reemplaza el camino local: es un segundo adaptador de los mismos dos puertos que ya existían, seleccionado por una variable de entorno (`EMH_ENV=local|aws`) en `emh/bootstrap.py`. Esto es, en sí mismo, la prueba en producción de NFR-016 (portabilidad): si el diseño de puertos fuera solo teórico, este cambio habría exigido tocar el núcleo; no lo exige.
+> **Estado real (2026-09-29): el código de F1 implementa solo los adaptadores **locales** (`DockerSandbox` + `SqliteRunRepository`); `PostgresRunRepository`, `FargateSandbox` y la selección por `EMH_ENV` están **diseñados pero NO implementados** (NOT IMPLEMENTED). Lo entregado y verificado de la parte de nube es la infraestructura como código: `terraform validate` y `terraform plan` reales contra la cuenta AWS (33 recursos a crear), sin `terraform apply`.**
+
+Diseño (promovido de F2 a F1, con la parte de código pendiente). El despliegue **no** reemplaza el camino local: es un segundo adaptador de los mismos dos puertos que ya existían, seleccionado por una variable de entorno (`EMH_ENV=local|aws`) en `emh/bootstrap.py`. Esto es, en sí mismo, la prueba en producción de NFR-016 (portabilidad): si el diseño de puertos fuera solo teórico, este cambio habría exigido tocar el núcleo; no lo exige.
 
 ```
-EMH_ENV=local   → DockerSandbox + SQLiteRunRepository   (dev, CI, respaldo de la demo en vivo)
-EMH_ENV=aws     → FargateSandbox + PostgresRunRepository (despliegue en la nube)
+EMH_ENV=local   → DockerSandbox + SQLiteRunRepository   (IMPLEMENTADO: dev, CI, demo en vivo)
+EMH_ENV=aws     → FargateSandbox + PostgresRunRepository (DISEÑADO, no implementado)
 ```
 
 | Elemento | Adaptador de nube | Reemplaza a |

@@ -42,9 +42,9 @@ Contenido del fixture: una API mínima de pedidos sobre Flask (`orders_api/app.p
 ## Qué se muestra en vivo (90 minutos de sustentación, `C-011`)
 
 1. Nivel A (los cuatro escenarios con `ScriptedModel`) — determinista, rápido, demuestra los controles. Corre en local (`EMH_ENV=local`), sin depender de la nube.
-2. Nivel B, Ejemplo A (`ledger-service`) completo con Nova 2 Lite real — demuestra el flujo con el modelo real, incluida la corrección. Se ejecuta contra el despliegue en AWS (`EMH_ENV=aws`, `ADR-006`/`ADR-007`); si algo falla en el ensayo previo, cae al camino local sin cambiar de código, solo de configuración.
+2. Nivel B, Ejemplo A (`ledger-service`) completo con Nova 2 Lite real — demuestra el flujo con el modelo real, incluida la corrección. Se ejecuta en local (Docker + SQLite) contra Bedrock real; el despliegue en AWS quedó como IaC validada con `terraform plan` (ADR-006/007), sin adaptadores de nube implementados.
 3. Nivel B, Ejemplo B (`orders-api`) — si el tiempo alcanza; si no, se muestra grabado (parte de la evidencia operativa entregable, `00-vision.md` §5 AC-15).
-4. Al cerrar la sustentación: `terraform destroy` sobre `infra/`, dejando la cuenta de AWS sin recursos facturables (`ADR-006`).
+4. Se muestra `terraform plan` (33 recursos) como evidencia de IaC. No se hizo `apply`, así que no hay recursos facturables que destruir.
 
 ## Cómo se reproduce (detalle exacto en el `README.md` del repositorio de implementación)
 

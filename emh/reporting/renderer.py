@@ -59,8 +59,8 @@ class ReportRenderer:
                 "id": ejecucion.id, "estado": ejecucion.estado.value,
                 "resultado": ejecucion.resultado.value if ejecucion.resultado else None,
                 "motivo_bloqueo": ejecucion.motivo_bloqueo.value if ejecucion.motivo_bloqueo else None,
-                "tokens_entrada": sum(l.tokens_entrada for l in llamadas),
-                "tokens_salida": sum(l.tokens_salida for l in llamadas),
+                "tokens_entrada": sum(c.tokens_entrada for c in llamadas),
+                "tokens_salida": sum(c.tokens_salida for c in llamadas),
                 "costo_estimado_usd": ejecucion.costo_estimado_usd,
                 "iteraciones_usadas": ejecucion.iteraciones_usadas,
                 "iniciado_en": ejecucion.iniciado_en.isoformat(),
@@ -125,7 +125,7 @@ class ReportRenderer:
                     if llamada.nombre == "resumen_reporte":
                         narrativa = llamada.argumentos["resumen"]
                         narrativa_generada_por_ia = True
-            except Exception:
+            except Exception:  # noqa: S110 -- la narrativa por IA es opcional: si falla se usa el resumen determinista
                 pass  # el reporte de hechos nunca depende de que la narrativa funcione
 
         return {**hechos, "narrativa": narrativa, "narrativa_generada_por_ia": narrativa_generada_por_ia}

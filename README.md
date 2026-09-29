@@ -1,5 +1,8 @@
 # Engineering Modernization Hub
 
+[![CI](https://github.com/mauc-agentic/engineering-modernization-hub/actions/workflows/ci.yml/badge.svg)](https://github.com/mauc-agentic/engineering-modernization-hub/actions/workflows/ci.yml)
+[![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](LICENSE)
+
 Prototipo funcional de un producto interno de autoservicio que acompaña
 modernizaciones de repositorios (frameworks, runtimes, dependencias,
 imágenes base) mediante IA, con controles deterministas para todo lo que
@@ -217,3 +220,11 @@ en todas las rutas y el ALB solo reenvía lo que trae la cabecera secreta de Clo
 (directo responde 403). El acceso directo a la IP de la tarea sigue limitado a tu IP
 (`cidr_acceso_api`; Terraform rechaza `0.0.0.0/0`). El ALB agrega ~USD 0.03/h: otra razón
 para el `terraform destroy` final.
+
+## Seguridad y contribuciones
+
+- Reportes de vulnerabilidades: ver [`SECURITY.md`](SECURITY.md) (reporte privado, no issues públicos).
+- El repositorio tiene protección de `main` (sin *force-push* ni borrado, historial lineal, cambios por
+  pull request con CI en verde), escaneo de secretos con *push protection*, Dependabot y CodeQL.
+- Las acciones de GitHub Actions están fijadas por hash de commit y el token del workflow es de solo lectura.
+- Licencia: [MIT](LICENSE).

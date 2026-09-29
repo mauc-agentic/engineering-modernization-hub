@@ -408,7 +408,8 @@ class SqliteRunRepository:
     def guardar_analisis_viabilidad(self, analisis) -> None:
         from emh.core.models import AnalisisViabilidad  # evita import circular arriba
 
-        assert isinstance(analisis, AnalisisViabilidad)
+        if not isinstance(analisis, AnalisisViabilidad):
+            raise TypeError("guardar_analisis_viabilidad espera un AnalisisViabilidad")
         cur = self._conn.execute(
             """INSERT INTO analisis_viabilidad (ejecucion_id, veredicto,
                impacto_detectado, evidencia, creado_en) VALUES (?,?,?,?,?)""",

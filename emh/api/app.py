@@ -149,7 +149,7 @@ def crear_app(aplicacion: Aplicacion) -> FastAPI:
         try:
             return aplicacion.reporte.render(ejecucion_id)
         except ValueError:
-            raise HTTPException(404, detail=_error("NO_ENCONTRADO", "ejecución no encontrada", ejecucion_id))
+            raise HTTPException(404, detail=_error("NO_ENCONTRADO", "ejecución no encontrada", ejecucion_id)) from None
 
     return app
 

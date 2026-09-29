@@ -61,8 +61,10 @@ def _fetcher_real(url: str) -> str:
 
     import certifi
 
+    if not url.startswith("https://"):  # nunca file: ni otros esquemas (el dominio ya viene validado por la política)
+        raise ValueError("solo se consultan fuentes por HTTPS")
     contexto = ssl.create_default_context(cafile=certifi.where())
-    with urlopen(url, timeout=15, context=contexto) as resp:
+    with urlopen(url, timeout=15, context=contexto) as resp:  # noqa: S310 -- esquema https comprobado arriba
         return resp.read().decode("utf-8", errors="replace")
 
 
@@ -303,7 +305,7 @@ def run_tests(ctx: ContextoHerramientas, args: ArgsRunTests) -> ResultadoHerrami
                     # un paso de instalación falló: no tiene sentido seguir con
                     # el resto de la secuencia (RN-11: se informa, no se cuelga)
                     break
-        for comando, resultado in zip(args.comandos, resultados):
+        for comando, resultado in zip(args.comandos, resultados, strict=False):  # la secuencia puede cortarse antes
             bloques.append(f"$ {' '.join(comando)}\n{resultado.salida}")
             codigo_final = resultado.codigo_salida
     finally:

@@ -92,7 +92,10 @@ def main() -> int:
     for var in [v for v in os.environ if v.startswith("EMH_")]:
         del os.environ[var]
 
-    with urllib.request.urlopen(url_entrada, timeout=120) as resp:
+    for u in (url_entrada, url_salida):
+        if not u.startswith(("https://", "http://")):  # nunca file: ni otros esquemas
+            raise ValueError("URL de trabajo con esquema no permitido")
+    with urllib.request.urlopen(url_entrada, timeout=120) as resp:  # noqa: S310 -- URL prefirmada inyectada por la API
         contenido = resp.read()
     workspace, wheelhouse, home = Path("/workspace"), Path("/wheelhouse"), Path("/tmp")
     workspace.mkdir(parents=True, exist_ok=True)
@@ -100,11 +103,11 @@ def main() -> int:
     comandos = extraer_trabajo(contenido, workspace, wheelhouse)
     resultados = ejecutar_comandos(comandos, workspace, home)
 
-    peticion = urllib.request.Request(
+    peticion = urllib.request.Request(  # noqa: S310 -- URL prefirmada inyectada por la API
         url_salida, data=json.dumps({"resultados": resultados}).encode("utf-8"), method="PUT",
         headers={"Content-Type": "application/json"},  # el mismo que firmó la API
     )
-    with urllib.request.urlopen(peticion, timeout=120):
+    with urllib.request.urlopen(peticion, timeout=120):  # noqa: S310
         pass
     return 0
 

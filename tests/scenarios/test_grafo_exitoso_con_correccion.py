@@ -180,7 +180,7 @@ def test_flujo_completo_exito_con_correccion(repo, workspace):
     assert pausa.ok and "pausa" in (pausa.detalle or "")  # la espera humana no cuenta como error
     assert all(len(t.detalle or "") <= 300 for t in trazas)
     llamadas = repo.listar_llamadas_modelo(e.id)
-    assert all(l.duracion_ms >= 0 for l in llamadas)  # antes se guardaba siempre 0
+    assert all(c.duracion_ms >= 0 for c in llamadas)  # antes se guardaba siempre 0
 
     # Hallazgo #12: la sonda de la estrategia se consulta siempre, queda
     # persistida como fuente, se le entrega al modelo y sustenta la decisión.
@@ -196,7 +196,7 @@ def test_flujo_completo_exito_con_correccion(repo, workspace):
     # Regresión hallazgo #9: el costo debe persistirse en la ejecución (antes
     # quedaba en 0 aunque las llamadas sí se registraban).
     llamadas = repo.listar_llamadas_modelo(e.id)
-    assert final.tokens_consumidos == sum(l.tokens_entrada + l.tokens_salida for l in llamadas) > 0
+    assert final.tokens_consumidos == sum(c.tokens_entrada + c.tokens_salida for c in llamadas) > 0
     assert final.costo_estimado_usd > 0
 
     verificaciones = repo.listar_verificaciones(e.id)

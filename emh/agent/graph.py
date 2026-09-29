@@ -103,7 +103,7 @@ def _construir_meter(entorno: Entorno, solicitud, ejecucion: Ejecucion) -> Presu
     return PresupuestoMeter(
         solicitud,
         momento_inicio=ejecucion.iniciado_en,
-        tokens_ya_consumidos=(sum(l.tokens_entrada for l in llamadas), sum(l.tokens_salida for l in llamadas)),
+        tokens_ya_consumidos=(sum(c.tokens_entrada for c in llamadas), sum(c.tokens_salida for c in llamadas)),
         iteraciones_ya_usadas=ejecucion.iteraciones_usadas,
     )
 
@@ -643,7 +643,7 @@ def construir_grafo(entorno: Entorno):
                 resultado = fn(estado)
                 try:
                     tramo.detalle = f"estado: {entorno.repo.obtener_ejecucion(ejecucion_id).estado.value}"
-                except Exception:  # la traza nunca rompe un nodo
+                except Exception:  # noqa: S110 -- la traza nunca rompe un nodo
                     pass
                 return resultado
         envuelto.__name__ = fn.__name__

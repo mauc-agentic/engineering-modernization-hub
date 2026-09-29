@@ -73,3 +73,24 @@ layers = [
     "emh.policy",
     "emh.core",
 ]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 140
+extend-exclude = ["infra"]
+
+[tool.ruff.lint]
+# E/F = errores; I = imports; UP = sintaxis moderna; B = bugs probables; S = seguridad (Bandit).
+select = ["E4", "E7", "E9", "F", "I", "UP", "B", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+# En pruebas: assert es el mecanismo, y hay secretos/credenciales de mentira a propósito
+# (para verificar que la redacción los oculta).
+"tests/**" = ["S101", "S105", "S106", "S108", "S110", "S603", "S607"]
+# `/tmp` es el tmpfs del sandbox (el venv efímero de la verificación), no un archivo temporal del host.
+"emh/strategies/python_dependency_upgrade.py" = ["S108"]
+"emh/execution/docker_sandbox.py" = ["S108"]
+"sandbox/entrypoint.py" = ["S108", "S603"]
+# subprocess SIN shell y con lista de argumentos ya validada por la política (allowlist, control 2).
+"emh/execution/wheelhouse.py" = ["S603"]
+"emh/harness/tools.py" = ["S603"]

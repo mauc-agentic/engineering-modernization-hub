@@ -132,12 +132,12 @@ class FargateSandbox:
         if trabajo is not None and trabajo.task_arn:
             try:
                 self._ecs.stop_task(cluster=self._cluster, task=trabajo.task_arn, reason="verificación terminada")
-            except Exception:  # noqa: BLE001 -- ya había terminado
+            except Exception:  # noqa: BLE001, S110 -- ya había terminado
                 pass
         for clave in ("input.tgz", "output.json"):
             try:
                 self._s3.delete_object(Bucket=self._bucket, Key=f"jobs/{identificador}/{clave}")
-            except Exception:  # noqa: BLE001 -- el bucket además expira objetos solo
+            except Exception:  # noqa: BLE001, S110 -- el bucket además expira objetos solo
                 pass
 
     # -- Internos ---------------------------------------------------------------

@@ -27,3 +27,13 @@ contribuciones se revisan con mejor esfuerzo.
 ## Vulnerabilidades
 
 No abras un issue público: sigue [`SECURITY.md`](SECURITY.md).
+
+## Commits trazables
+
+Cada commit de implementación cita un ID de `DOCS/01-requisitos.md` (p. ej. `fix(politica): … (NFR-002)`). Activa el hook local una vez:
+
+```bash
+cp scripts/hooks/commit-msg .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg
+```
+
+El job `commits` de CI hace la misma comprobación. Antes de abrir un PR: `pytest`, `ruff check .`, `lint-imports` y, si tocaste `DOCS/`, `python scripts/generar_trazabilidad.py`.

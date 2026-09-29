@@ -6,7 +6,7 @@
 **Nombre:** Descubrir y analizar viabilidad
 **Actor principal:** Plataforma
 **Meta:** La plataforma determina, con evidencia trazable, si la modernización solicitada es viable y, si lo es, construye un plan de cambios con su alcance.
-**Estado:** Aprobado
+**Estado:** Done (implementado y probado; ver `DOCS/TRAZABILIDAD.md`)
 
 ## Precondiciones
 

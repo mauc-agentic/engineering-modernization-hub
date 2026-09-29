@@ -6,7 +6,7 @@
 **Nombre:** Revisar y aprobar el plan
 **Actor principal:** Desarrollador
 **Meta:** El desarrollador decide, con toda la información del análisis y el plan a la vista, si autoriza a la plataforma a modificar su repositorio.
-**Estado:** Aprobado
+**Estado:** Done (implementado y probado; ver `DOCS/TRAZABILIDAD.md`)
 
 ## Precondiciones
 

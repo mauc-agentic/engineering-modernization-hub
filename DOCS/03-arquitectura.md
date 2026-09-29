@@ -105,7 +105,7 @@ emh/bootstrap  ← raíz de composición: el único lugar que conoce a todos
 
 | Puerto | Lo implementa | Función |
 |---|---|---|
-| `AgentRunner` | `emh/agent` | `run(run_id)`, `resume(run_id, decisión)`. El núcleo invoca al agente sin saber que es LangGraph. |
+| `AgentRunner` | `emh/agent` | `run(ejecucion_id)`, `resume(ejecucion_id, decisión)`. El núcleo invoca al agente sin saber que es LangGraph. |
 | `ModelPort` | `emh/models` (Bedrock) · `ScriptedModel` (pruebas, **SIMULADO**) | Completar/estructurar con el modelo, informando tokens consumidos. |
 | `RunRepository` | `emh/persistence`: SQLite (local) · RDS Postgres (nube, `EMH_ENV=aws`) | Guardar y leer solicitudes, ejecuciones, planes, decisiones, fuentes, eventos. |
 | `Sandbox` | `emh/execution`: Docker (local) · ECS Fargate `RunTask` (nube, `EMH_ENV=aws`) | Crear, ejecutar comandos en y destruir un contenedor efímero. |

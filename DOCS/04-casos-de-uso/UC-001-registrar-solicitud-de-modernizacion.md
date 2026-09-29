@@ -6,7 +6,7 @@
 **Nombre:** Registrar solicitud de modernización
 **Actor principal:** Desarrollador
 **Meta:** El desarrollador deja registrada una solicitud completa y válida, y recibe un identificador para seguirla, sin coordinar con un equipo de plataforma.
-**Estado:** Aprobado
+**Estado:** Done (implementado y probado; ver `DOCS/TRAZABILIDAD.md`)
 
 ## Precondiciones
 

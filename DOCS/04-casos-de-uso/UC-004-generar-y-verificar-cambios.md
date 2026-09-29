@@ -6,7 +6,7 @@
 **Nombre:** Generar y verificar cambios
 **Actor principal:** Plataforma
 **Meta:** La plataforma aplica el plan aprobado dentro de su alcance exacto, verifica el resultado con pruebas reales y corrige los fallos que encuentre, hasta un resultado claro.
-**Estado:** Aprobado
+**Estado:** Done (implementado y probado; ver `DOCS/TRAZABILIDAD.md`)
 
 ## Precondiciones
 

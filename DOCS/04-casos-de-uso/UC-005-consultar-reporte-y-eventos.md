@@ -7,7 +7,7 @@
 **Actor principal:** Desarrollador
 **Actores secundarios:** Equipo de seguridad
 **Meta:** El desarrollador (o el equipo de seguridad) obtiene un reporte completo y auditable de una ejecución, con su resultado, sus cambios, sus verificaciones, sus fuentes y sus eventos de seguridad.
-**Estado:** Aprobado
+**Estado:** Done (implementado y probado; ver `DOCS/TRAZABILIDAD.md`)
 
 ## Precondiciones
 

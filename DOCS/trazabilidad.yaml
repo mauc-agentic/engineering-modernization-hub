@@ -1,0 +1,62 @@
+# Fuente única de la matriz requisito → código → prueba. `scripts/generar_trazabilidad.py` la valida
+# (todo camino debe existir) y genera DOCS/TRAZABILIDAD.md. Un requisito Verified sin prueba es un error.
+
+
+requisitos:
+  FR-001: {codigo: [emh/api/app.py, emh/api/schemas.py], pruebas: [tests/contract/test_api.py]}
+  FR-002: {codigo: [emh/api/app.py], pruebas: [tests/contract/test_api.py]}
+  FR-003: {codigo: [emh/api/app.py], pruebas: [tests/contract/test_api.py]}
+  FR-004: {codigo: [emh/agent/graph.py, emh/harness/tools.py], pruebas: [tests/scenarios/test_grafo_exitoso_con_correccion.py]}
+  FR-005: {codigo: [emh/harness/tools.py, emh/policy/gate.py], pruebas: [tests/unit/test_harness_tools.py, tests/unit/test_strategies.py]}
+  FR-006: {codigo: [emh/agent/graph.py, emh/agent/prompts.py], pruebas: [tests/scenarios/test_grafo_exitoso_con_correccion.py]}
+  FR-007: {codigo: [emh/agent/graph.py], pruebas: [tests/scenarios/test_grafo_inviable.py]}
+  FR-008: {codigo: [emh/agent/graph.py], pruebas: [tests/scenarios/test_grafo_inviable.py]}
+  FR-009: {codigo: [emh/agent/graph.py, emh/core/models.py], pruebas: [tests/scenarios/test_grafo_exitoso_con_correccion.py]}
+  FR-010: {codigo: [emh/api/app.py, frontend/index.html], pruebas: [tests/contract/test_api.py]}
+  FR-011: {codigo: [emh/policy/gate.py, emh/api/app.py], pruebas: [tests/unit/test_policy_gate.py, tests/contract/test_api.py]}
+  FR-012: {codigo: [emh/agent/graph.py, emh/harness/tools.py], pruebas: [tests/scenarios/test_grafo_exitoso_con_correccion.py]}
+  FR-013: {codigo: [emh/policy/gate.py], pruebas: [tests/unit/test_policy_gate.py]}
+  FR-014: {codigo: [emh/policy/gate.py, emh/strategies/python_dependency_upgrade.py], pruebas: [tests/unit/test_policy_gate.py, tests/unit/test_strategies.py]}
+  FR-015: {codigo: [emh/execution/docker_sandbox.py, emh/execution/fargate_sandbox.py], pruebas: [tests/contract/test_docker_sandbox.py, tests/unit/test_fargate_sandbox.py]}
+  FR-016: {codigo: [emh/api/app.py], pruebas: [tests/contract/test_api.py]}
+  FR-017: {codigo: [emh/agent/graph.py], pruebas: [tests/scenarios/test_grafo_exitoso_con_correccion.py]}
+  FR-018: {codigo: [emh/core/state_machine.py], pruebas: [tests/unit/test_state_machine.py]}
+  FR-019: {codigo: [emh/reporting/renderer.py], pruebas: [tests/unit/test_reporting.py]}
+  FR-020: {codigo: [emh/persistence/sqlite_repo.py, emh/persistence/postgres_repo.py, emh/bootstrap.py], pruebas: [tests/contract/test_run_repository.py, tests/contract/test_checkpointer_persistente.py]}
+  FR-021: {codigo: [emh/policy/gate.py, emh/harness/tools.py], pruebas: [tests/unit/test_harness_tools.py, tests/scenarios/test_grafo_solicitud_insegura.py]}
+  FR-022: {codigo: [emh/agent/prompts.py, emh/policy/gate.py], pruebas: [tests/scenarios/test_grafo_solicitud_insegura.py]}
+  FR-023: {codigo: [emh/core/budget.py], pruebas: [tests/unit/test_budget.py]}
+  FR-024: {codigo: [emh/strategies/registry.py, emh/bootstrap.py], pruebas: [tests/unit/test_strategies.py]}
+  FR-025: {codigo: [emh/strategies/python_dependency_upgrade.py], pruebas: [tests/unit/test_strategies.py]}
+  FR-026: {codigo: [tests/scenarios], pruebas: [tests/scenarios/test_grafo_exitoso_con_correccion.py, tests/scenarios/test_grafo_inviable.py, tests/scenarios/test_grafo_solicitud_insegura.py]}
+  FR-038: {codigo: [infra/ecs.tf, infra/rds.tf, infra/cloudfront.tf], pruebas: [.github/workflows/ci.yml]}
+  FR-040: {codigo: [emh/execution/fargate_sandbox.py, emh/persistence/postgres_repo.py], pruebas: [tests/unit/test_fargate_sandbox.py, tests/unit/test_bootstrap.py]}
+  FR-041: {codigo: [emh/agent/traza.py], pruebas: [tests/unit/test_traza_otel.py, tests/scenarios/test_grafo_exitoso_con_correccion.py]}
+  FR-042: {codigo: [frontend/index.html], pruebas: [tests/contract/test_api.py]}
+  NFR-001: {codigo: [emh/policy/gate.py], pruebas: [tests/scenarios/test_grafo_solicitud_insegura.py, tests/unit/test_policy_gate.py]}
+  NFR-002: {codigo: [emh/policy/gate.py, emh/harness/tools.py], pruebas: [tests/unit/test_toda_accion_pasa_por_la_politica.py]}
+  NFR-003: {codigo: [emh/policy/gate.py], pruebas: [tests/unit/test_policy_gate.py]}
+  NFR-004: {codigo: [emh/execution/docker_sandbox.py], pruebas: [tests/contract/test_docker_sandbox.py]}
+  NFR-005: {codigo: [emh/execution/docker_sandbox.py, infra/network.tf], pruebas: [tests/contract/test_docker_sandbox.py]}
+  NFR-006: {codigo: [emh/agent/prompts.py, emh/policy/gate.py], pruebas: [tests/scenarios/test_grafo_solicitud_insegura.py]}
+  NFR-007: {codigo: [emh/agent/runner.py], pruebas: [tests/scenarios/test_fallos_inducidos.py]}
+  NFR-008: {codigo: [emh/agent/runtime.py, emh/models/bedrock.py], pruebas: [tests/scenarios/test_fallos_inducidos.py, tests/unit/test_reintentos_bedrock.py]}
+  NFR-009: {codigo: [emh/core/budget.py], pruebas: [tests/unit/test_budget.py]}
+  NFR-010: {codigo: [emh/reporting/renderer.py], pruebas: [tests/unit/test_reporting.py]}
+  NFR-012: {codigo: [emh/reporting/renderer.py], pruebas: [tests/unit/test_reporting.py]}
+  NFR-013: {codigo: [emh/harness/tools.py, emh/persistence/sqlite_repo.py], pruebas: [tests/unit/test_harness_tools.py]}
+  NFR-014: {codigo: [emh/agent/traza.py], pruebas: [tests/unit/test_traza_otel.py]}
+  NFR-015: {codigo: [emh/strategies/registry.py, pyproject.toml], pruebas: [tests/unit/test_strategies.py]}
+  NFR-016: {codigo: [emh/core/ports.py, emh/bootstrap.py], pruebas: [tests/unit/test_bootstrap.py, tests/contract/test_run_repository.py]}
+  NFR-017: {codigo: [scripts/00-preparar.sh, scripts/01-pruebas.sh], pruebas: [.github/workflows/ci.yml]}
+  NFR-018: {codigo: [emh/models/scripted.py], pruebas: [tests/unit/test_scripted_model.py]}
+  NFR-019: {codigo: [emh/models/scripted.py, emh/api/schemas.py], pruebas: [tests/docs/test_coherencia.py]}
+  NFR-020: {codigo: [emh/persistence/sqlite_repo.py], pruebas: [tests/contract/test_run_repository.py]}
+  NFR-021: {codigo: [emh/api/app.py, emh/api/schemas.py], pruebas: [tests/contract/test_api.py]}
+  NFR-022: {codigo: [scripts/verificar_commits.py, scripts/hooks/commit-msg], pruebas: [tests/unit/test_verificar_commits.py]}
+  NFR-023: {codigo: [infra/budget.tf], pruebas: [.github/workflows/ci.yml]}
+  NFR-024: {codigo: [infra/rds.tf, infra/alb.tf], pruebas: [.github/workflows/ci.yml]}
+  NFR-025: {codigo: [emh/bootstrap.py], pruebas: [tests/unit/test_bootstrap.py]}
+  NFR-026: {codigo: [emh/agent/traza.py, infra/observabilidad.tf], pruebas: [tests/unit/test_traza_otel.py]}
+  NFR-027: {codigo: [infra/cloudfront.tf, infra/alb.tf], pruebas: [.github/workflows/ci.yml]}
+  NFR-028: {codigo: [.github/CODEOWNERS, .github/dependabot.yml, SECURITY.md], pruebas: [.github/workflows/ci.yml]}

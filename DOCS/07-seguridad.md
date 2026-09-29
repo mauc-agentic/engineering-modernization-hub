@@ -33,7 +33,7 @@ Este documento es el modelo de amenazas: qué puede salir mal, por dónde, y qu�
 
 | Amenaza | Escenario concreto | Control que lo cubre |
 |---|---|---|
-| **Suplantación** (Spoofing) | Una decisión de aprobación se atribuye a alguien que no la tomó. | F1 no tiene autenticación real (simulación explícita, RN-14); mitigado parcialmente registrando la identidad declarada y el `run_id` en cada decisión. Resuelto en F2 con SSO (FR-039). |
+| **Suplantación** (Spoofing) | Una decisión de aprobación se atribuye a alguien que no la tomó. | F1 no tiene autenticación real (simulación explícita, RN-14); mitigado parcialmente registrando la identidad declarada y el `ejecucion_id` en cada decisión. Resuelto en F2 con SSO (FR-039). |
 | **Alteración** (Tampering) | Un parche modifica un archivo fuera del plan aprobado (p. ej. un *workflow* de CI, un archivo de configuración de despliegue). | Control 3 y 7 (rutas modificables, validación de alcance). |
 | **Alteración** | El modelo, manipulado por contenido del repositorio, intenta desactivar o borrar pruebas para simular éxito. | Control 7 (bloquea el borrado/vaciado de archivos de prueba) + control 8 (el conteo de pruebas no puede bajar de la línea base). |
 | **Repudio** (Repudiation) | Nadie puede explicar por qué se tomó una decisión o se bloqueó una acción. | `DECISION_TECNICA` con citas de fuentes (RN-12) y `EVENTO_SEGURIDAD` para cada bloqueo (RN-10), ambos persistidos con marca de tiempo. |

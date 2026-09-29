@@ -29,7 +29,7 @@ La traza y los spans guardan **nombres, tiempos, tokens y una nota corta ya reda
 
 ## Verificación (2026-09-29, en AWS)
 
-- 174 pruebas verdes: traza de extremo a extremo en el escenario con corrección, contrato del repositorio contra SQLite y Postgres reales, endpoint, y spans con el SDK de OpenTelemetry en memoria (jerarquía, atributos, error, pausa, sin OpenTelemetry).
+- Pruebas verdes (la cifra vigente está en el README): traza de extremo a extremo en el escenario con corrección, contrato del repositorio contra SQLite y Postgres reales, endpoint, y spans con el SDK de OpenTelemetry en memoria (jerarquía, atributos, error, pausa, sin OpenTelemetry).
 - Ejecución real 22 por la URL pública: la base de datos registró 18 tramos y CloudWatch recibió 19 spans (los 18 más la raíz `ejecucion`), con tokens en los del modelo.
 - La cuenta ya tenía CloudWatch Transaction Search activo (destino CloudWatch Logs, muestreo 100 %), prerrequisito de la guía.
 

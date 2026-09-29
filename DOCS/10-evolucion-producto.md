@@ -71,7 +71,7 @@ Para cada elemento: qué es, por qué no entró en F1, y qué habría que tocar 
 
 **Por qué no entró en F1:** con NFR-020 (2 ejecuciones concurrentes) como techo de F1, un solo proceso basta; una cola introduce infraestructura (broker) sin carga que la justifique todavía.
 
-**Qué habría que tocar:** `AgentRunner.run()` ya es la unidad de trabajo (un `run_id`); se envuelve en una tarea de cola (p. ej. Celery, o colas nativas de AWS en F2 con SQS) que invoca lo mismo que hoy invoca la API en segundo plano. El *checkpointer* de LangGraph (ADR-003) ya soporta reanudar desde otro proceso, lo cual es precisamente lo que un *worker* distribuido necesita.
+**Qué habría que tocar:** `AgentRunner.run()` ya es la unidad de trabajo (un `ejecucion_id`); se envuelve en una tarea de cola (p. ej. Celery, o colas nativas de AWS en F2 con SQS) que invoca lo mismo que hoy invoca la API en segundo plano. El *checkpointer* de LangGraph (ADR-003) ya soporta reanudar desde otro proceso, lo cual es precisamente lo que un *worker* distribuido necesita.
 
 ## FR-038 — Despliegue en AWS con Terraform — **promovido a F1 (D-9, 2026-09-28)**
 

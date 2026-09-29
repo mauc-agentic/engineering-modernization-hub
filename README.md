@@ -42,7 +42,7 @@ El proyecto tiene dos niveles de pruebas (`DOCS/03-arquitectura.md` §8):
 - **Nivel A** (`ScriptedModel`, **SIMULATED**): determinista, sin red ni Bedrock. Corre en segundos.
 - **Nivel B** (`@pytest.mark.live`): contra Amazon Bedrock real (Nova 2 Lite). Requiere credenciales AWS.
 
-La suite completa son 174 pruebas (más 1 omitida a propósito) e incluye Docker real y Bedrock real.
+La suite completa son 205 pruebas verdes (más 1 omitida a propósito) e incluye Docker real y Bedrock real.
 
 ```bash
 # Todo (nivel A + contratos + Docker real + Bedrock real):
@@ -186,6 +186,17 @@ viaja por S3 con URLs prefirmadas; ver ADR-006). Recursos: VPC pública sin NAT,
 ECR, ECS Fargate ARM64 (API + sandbox), RDS `db.t4g.micro`, bucket S3 con
 expiración, SSM, roles de mínimo privilegio y alertas de presupuesto.
 Costo del ejercicio: unos pocos dólares (RDS y Fargate cobran por hora).
+
+### Variables de entorno
+
+| Variable | Uso | Por defecto |
+|---|---|---|
+| `EMH_ENV` | `local` (SQLite + Docker) o `aws` (RDS + Fargate) | `local` |
+| `EMH_DATA_DIR` | SQLite, checkpoints y workspaces (local) | `./data` |
+| `EMH_MODO_SIMULADO` | `1` = modelo guionado (SIMULATED, solo pruebas) | apagado |
+| `EMH_BEDROCK_MODEL_ID`, `AWS_REGION` | Modelo y región de Bedrock | Nova 2 Lite |
+| `EMH_DB_HOST/PORT/NAME/USER/PASSWORD/SSLMODE` | Postgres (solo `aws`) | — |
+| `EMH_ECS_CLUSTER`, `EMH_SANDBOX_TASK_DEFINITION`, `EMH_SUBNET_IDS`, `EMH_SANDBOX_SECURITY_GROUP`, `EMH_JOBS_BUCKET` | Sandbox Fargate (solo `aws`) | — |
 
 ```bash
 cd infra

@@ -136,3 +136,55 @@ def test_intento_malicioso_persistente_termina_bloqueado_sin_efecto(repo, worksp
     assert all(ev.regla == "control_07_validacion_alcance" for ev in eventos)
     assert all(ev.origen is OrigenEvento.MODELO for ev in eventos)
     assert any(".env.example" in ev.accion_intentada for ev in eventos)
+
+
+CANARIOS = {
+    "clave de acceso AWS en un archivo": "AKIACANARY1234567890",
+    "contraseña en un archivo .env": "canario-clave-super-secreta-4f1c",
+    "secreto en una cadena de conexión": "canario-conexion-9d2e",
+    "secreto del entorno del host": "canario-entorno-host-777",
+}
+
+
+def test_canario_de_secretos_no_llega_al_modelo_ni_a_la_base_de_datos_ni_al_reporte(repo, tmp_path, monkeypatch):
+    """NFR-001 / AC-04: un secreto canario presente en el ENTORNO del host y en un ARCHIVO del repositorio
+    aparece en 0 solicitudes al modelo, 0 filas de la base de datos y 0 secciones del reporte, aunque el modelo
+    lea justamente ese archivo (la redacción ocurre en el harness, antes de que el modelo lo vea)."""
+    import json
+
+    from emh.reporting.renderer import ReportRenderer
+
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", CANARIOS["secreto del entorno del host"])
+    ws = tmp_path / "ws"
+    ws.mkdir()
+    (ws / "requirements.txt").write_text("PyYAML==5.3.1\n")
+    (ws / ".env.example").write_text(
+        f"AWS_ACCESS_KEY_ID={CANARIOS['clave de acceso AWS en un archivo']}\n"
+        f"DB_PASSWORD={CANARIOS['contraseña en un archivo .env']}\n"
+        f"DATABASE_URL=postgres://admin:{CANARIOS['secreto en una cadena de conexión']}@db.interna:5432/x\n"
+    )
+    s = repo.guardar_solicitud(solicitud(objetivo="Actualizar PyYAML", version_esperada="PyYAML==6.0.2"))
+    e = repo.guardar_ejecucion(ejecucion(solicitud_id=s.id))
+    guion = [
+        _r("t1", "objetivo_interpretado", {"objetivo_normalizado": "Actualizar PyYAML"}),
+        _r("t2", "read_file", {"ruta": ".env.example"}),  # el modelo LEE el archivo con secretos
+        _r("t3", "listo", {"resumen": "leí .env.example"}),
+        _r("t4", "listo", {"resumen": "fuentes"}),
+        _r("t5", "veredicto_viabilidad", {"veredicto": "INVIABLE", "impacto_detectado": "n/a", "evidencia": "n/a"}),
+    ]
+    modelo = ScriptedModel(guion)
+    entorno = Entorno(
+        repo=repo, modelo=modelo, gate=PolicyGate(EJECUTABLES), sandbox=None,
+        workspace_root_para=lambda eid: ws,
+        ejecutor_host=lambda c, cwd: ResultadoComando(codigo_salida=0, salida="ok"),
+        fetcher=lambda url: "(fuente falsa)",
+    )
+    LangGraphAgentRunner(entorno).run(e.id)
+
+    a_modelo = json.dumps(modelo.mensajes_recibidos, ensure_ascii=False) + " ".join(str(x) for x in modelo.sistemas_recibidos)
+    assert "[REDACTADO]" in a_modelo  # el archivo SÍ se leyó, pero ya redactado
+    volcado_bd = "\n".join(repo._conn._conn.iterdump()) if hasattr(repo._conn, "_conn") else "\n".join(repo._conn.iterdump())
+    reporte = json.dumps(ReportRenderer(repo).render(e.id), ensure_ascii=False, default=str)
+    for donde, texto in (("solicitudes al modelo", a_modelo), ("filas de la base de datos", volcado_bd), ("reporte", reporte)):
+        for nombre, valor in CANARIOS.items():
+            assert valor not in texto, f"el canario '{nombre}' apareció en {donde}"

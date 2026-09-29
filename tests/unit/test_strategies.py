@@ -24,8 +24,8 @@ def test_discovery_signals_incluye_manifiestos():
 
 def test_official_sources_incluye_pypi():
     s = PythonDependencyUpgradeStrategy()
-    dominios = [f.dominio for f in s.official_sources(solicitud())]
-    assert "pypi.org" in dominios
+    dominios = {f.dominio for f in s.official_sources(solicitud())}
+    assert dominios == {"pypi.org", "github.com"}  # exactamente estas fuentes, no más
 
 
 def test_scope_template_solo_autoriza_modificar():

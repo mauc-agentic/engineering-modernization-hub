@@ -229,6 +229,23 @@ class EventoSeguridad(BaseModel):
     registrado_en: datetime = Field(default_factory=utcnow)
 
 
+class Traza(BaseModel):
+    """Un tramo de la ejecución (observabilidad, NFR-014): un nodo del grafo, una
+    llamada al modelo o una llamada a herramienta, con su duración real. Nunca
+    lleva contenido de prompts, archivos ni salidas: solo forma y tiempos."""
+
+    id: int | None = None
+    ejecucion_id: int
+    tipo: str = Field(pattern="^(nodo|modelo|herramienta)$")
+    nombre: str = Field(max_length=100)
+    inicio: datetime = Field(default_factory=utcnow)
+    duracion_ms: int = Field(ge=0, le=86_400_000)
+    ok: bool = True
+    tokens_entrada: int = Field(default=0, ge=0)
+    tokens_salida: int = Field(default=0, ge=0)
+    detalle: str | None = Field(default=None, max_length=300)
+
+
 class LlamadaModelo(BaseModel):
     id: int | None = None
     ejecucion_id: int

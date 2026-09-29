@@ -164,6 +164,24 @@ def test_flujo_completo_exito_con_correccion(repo, workspace):
     assert final.resultado is ResultadoEjecucion.LISTO_PARA_REVISION
     assert final.iteraciones_usadas == 1  # un ciclo de corrección (límite era 3)
 
+    # Observabilidad: cada nodo, llamada al modelo y herramienta deja su tramo con
+    # duración real y sin contenido (NFR-014).
+    trazas = repo.listar_trazas(e.id)
+    nodos = [t.nombre for t in trazas if t.tipo == "nodo"]
+    assert {"interpretar_solicitud", "descubrir_repo", "evaluar_viabilidad", "proponer_plan",
+            "compuerta_aprobacion", "generar_cambios", "ejecutar_verificaciones", "analizar_error",
+            "proponer_correccion", "construir_reporte"} <= set(nodos)
+    assert nodos.count("ejecutar_verificaciones") == 2  # antes y después de la corrección
+    modelo_t = [t for t in trazas if t.tipo == "modelo"]
+    assert modelo_t and sum(t.tokens_entrada for t in modelo_t) > 0
+    assert {"apply_patch", "run_tests"} <= {t.nombre for t in trazas if t.tipo == "herramienta"}
+    assert all(t.duracion_ms >= 0 for t in trazas)
+    pausa = next(t for t in trazas if t.nombre == "compuerta_aprobacion")
+    assert pausa.ok and "pausa" in (pausa.detalle or "")  # la espera humana no cuenta como error
+    assert all(len(t.detalle or "") <= 300 for t in trazas)
+    llamadas = repo.listar_llamadas_modelo(e.id)
+    assert all(l.duracion_ms >= 0 for l in llamadas)  # antes se guardaba siempre 0
+
     # Hallazgo #12: la sonda de la estrategia se consulta siempre, queda
     # persistida como fuente, se le entrega al modelo y sustenta la decisión.
     fuentes = repo.listar_fuentes(e.id)

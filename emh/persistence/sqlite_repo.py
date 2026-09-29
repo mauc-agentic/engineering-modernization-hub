@@ -18,6 +18,7 @@ from emh.core.models import (
     LlamadaModelo,
     Plan,
     Solicitud,
+    Traza,
     Verificacion,
 )
 
@@ -370,6 +371,33 @@ class SqliteRunRepository:
                 id=r["id"], ejecucion_id=r["ejecucion_id"], nodo=r["nodo"],
                 tokens_entrada=r["tokens_entrada"], tokens_salida=r["tokens_salida"],
                 duracion_ms=r["duracion_ms"], creado_en=_parse_dt(r["creado_en"]),
+            )
+            for r in rows
+        ]
+
+    # -- Traza (observabilidad) --------------------------------------------------
+
+    def guardar_traza(self, traza: Traza) -> Traza:
+        cur = self._conn.execute(
+            """INSERT INTO traza (ejecucion_id, tipo, nombre, inicio, duracion_ms, ok,
+               tokens_entrada, tokens_salida, detalle) VALUES (?,?,?,?,?,?,?,?,?)""",
+            (
+                traza.ejecucion_id, traza.tipo, traza.nombre, _dt(traza.inicio),
+                traza.duracion_ms, int(traza.ok), traza.tokens_entrada, traza.tokens_salida, traza.detalle,
+            ),
+        )
+        self._conn.commit()
+        return traza.model_copy(update={"id": cur.lastrowid})
+
+    def listar_trazas(self, ejecucion_id: int) -> list[Traza]:
+        rows = self._conn.execute(
+            "SELECT * FROM traza WHERE ejecucion_id = ? ORDER BY inicio, id", (ejecucion_id,)
+        ).fetchall()
+        return [
+            Traza(
+                id=r["id"], ejecucion_id=r["ejecucion_id"], tipo=r["tipo"], nombre=r["nombre"],
+                inicio=_parse_dt(r["inicio"]), duracion_ms=r["duracion_ms"], ok=bool(r["ok"]),
+                tokens_entrada=r["tokens_entrada"], tokens_salida=r["tokens_salida"], detalle=r["detalle"],
             )
             for r in rows
         ]

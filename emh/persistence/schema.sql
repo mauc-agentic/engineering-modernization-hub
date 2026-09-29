@@ -123,6 +123,20 @@ CREATE TABLE IF NOT EXISTS llamada_modelo (
     creado_en         TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS traza (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    ejecucion_id      INTEGER NOT NULL REFERENCES ejecucion(id),
+    tipo              TEXT NOT NULL,
+    nombre            TEXT NOT NULL,
+    inicio            TEXT NOT NULL,
+    duracion_ms       INTEGER NOT NULL,
+    ok                INTEGER NOT NULL DEFAULT 1,
+    tokens_entrada    INTEGER NOT NULL DEFAULT 0,
+    tokens_salida     INTEGER NOT NULL DEFAULT 0,
+    detalle           TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_traza_ejecucion ON traza(ejecucion_id);
 CREATE INDEX IF NOT EXISTS idx_ejecucion_solicitud ON ejecucion(solicitud_id);
 CREATE INDEX IF NOT EXISTS idx_plan_ejecucion ON plan(ejecucion_id);
 CREATE INDEX IF NOT EXISTS idx_verificacion_ejecucion ON verificacion(ejecucion_id);

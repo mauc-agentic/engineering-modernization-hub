@@ -115,6 +115,35 @@ def crear_app(aplicacion: Aplicacion) -> FastAPI:
             for ev in aplicacion.repo.listar_eventos_seguridad(ejecucion_id)
         ]
 
+    @app.get("/ejecuciones/{ejecucion_id}/traza")
+    def obtener_traza(ejecucion_id: int):
+        """Observabilidad de la ejecución: cada nodo, llamada al modelo y herramienta
+        con su duración real, tokens y resultado. Sin contenido de prompts ni archivos."""
+        if aplicacion.repo.obtener_ejecucion(ejecucion_id) is None:
+            raise HTTPException(404, detail=_error("NO_ENCONTRADO", "ejecución no encontrada", ejecucion_id))
+        trazas = aplicacion.repo.listar_trazas(ejecucion_id)
+        t0 = min((t.inicio for t in trazas), default=None)
+        tramos = [
+            {
+                "tipo": t.tipo, "nombre": t.nombre, "ok": t.ok, "duracion_ms": t.duracion_ms,
+                "desplazamiento_ms": int((t.inicio - t0).total_seconds() * 1000),
+                "tokens_entrada": t.tokens_entrada, "tokens_salida": t.tokens_salida, "detalle": t.detalle,
+            }
+            for t in trazas
+        ]
+        fin = max((x["desplazamiento_ms"] + x["duracion_ms"] for x in tramos), default=0)
+        return {
+            "tramos": tramos,
+            "resumen": {
+                "duracion_total_ms": fin,
+                "llamadas_modelo": sum(1 for t in trazas if t.tipo == "modelo"),
+                "llamadas_herramienta": sum(1 for t in trazas if t.tipo == "herramienta"),
+                "tokens_entrada": sum(t.tokens_entrada for t in trazas),
+                "tokens_salida": sum(t.tokens_salida for t in trazas),
+                "errores": sum(1 for t in trazas if not t.ok),
+            },
+        }
+
     @app.get("/ejecuciones/{ejecucion_id}/reporte")
     def obtener_reporte(ejecucion_id: int):
         try:

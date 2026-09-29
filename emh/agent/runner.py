@@ -6,7 +6,8 @@ verdad del estado de negocio (DOCS/03-arquitectura.md §3.1)."""
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
@@ -16,6 +17,25 @@ from emh.agent.graph import Entorno, _finalizar, construir_grafo
 from emh.core.models import ResultadoEjecucion
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _span_de_ejecucion(ejecucion_id: int) -> Iterator[None]:
+    """Span raíz `ejecucion` y `session.id` en el baggage: AgentCore Observability
+    agrupa por sesión, y cada ejecución es una sesión. No-op sin OpenTelemetry."""
+    try:
+        from opentelemetry import baggage, context, trace
+    except ImportError:
+        yield
+        return
+    token = context.attach(baggage.set_baggage("session.id", f"ejecucion-{ejecucion_id}"))
+    try:
+        with trace.get_tracer("emh.agente").start_as_current_span("ejecucion") as span:
+            span.set_attribute("emh.ejecucion_id", ejecucion_id)
+            span.set_attribute("session.id", f"ejecucion-{ejecucion_id}")
+            yield
+    finally:
+        context.detach(token)
 
 
 class LangGraphAgentRunner:
@@ -32,7 +52,8 @@ class LangGraphAgentRunner:
         no deja la ejecución colgada en un estado intermedio: termina como
         FALLIDO_CONTROLADO y el detalle queda en el log del servicio."""
         try:
-            accion()
+            with _span_de_ejecucion(ejecucion_id):
+                accion()
         except Exception:
             logger.exception("ejecución %s: error inesperado; se finaliza de forma controlada", ejecucion_id)
             try:

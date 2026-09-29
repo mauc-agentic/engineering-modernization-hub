@@ -214,3 +214,22 @@ def test_claves_foraneas_activas(repo):
 
     with pytest.raises((sqlite3.IntegrityError, psycopg.IntegrityError)):
         repo.guardar_ejecucion(ejecucion(solicitud_id=999999))
+
+
+def test_traza_guarda_y_lista_en_orden_de_inicio(repo):
+    from datetime import UTC, datetime, timedelta
+
+    from emh.core.models import Traza
+
+    s = repo.guardar_solicitud(solicitud())
+    e = repo.guardar_ejecucion(ejecucion(solicitud_id=s.id))
+    base = datetime(2026, 9, 29, 12, 0, tzinfo=UTC)
+    repo.guardar_traza(Traza(ejecucion_id=e.id, tipo="modelo", nombre="b", inicio=base + timedelta(seconds=2),
+                             duracion_ms=300, tokens_entrada=10, tokens_salida=5))
+    repo.guardar_traza(Traza(ejecucion_id=e.id, tipo="nodo", nombre="a", inicio=base, duracion_ms=5000,
+                             ok=False, detalle="TimeoutError"))
+    lista = repo.listar_trazas(e.id)
+    assert [t.nombre for t in lista] == ["a", "b"]
+    assert lista[0].ok is False and lista[0].detalle == "TimeoutError"
+    assert lista[1].tokens_entrada == 10
+    assert repo.listar_trazas(999999) == []

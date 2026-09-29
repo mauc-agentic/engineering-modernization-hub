@@ -26,6 +26,7 @@ from emh.agent.runtime import (
     bucle_exploracion,
     pedir_estructurado,
 )
+from emh.agent.traza import medir
 from emh.core.budget import PresupuestoMeter
 from emh.core.errors import PresupuestoAgotado
 from emh.core.models import (
@@ -121,7 +122,10 @@ def _con_evidencia_de_sondas(
     solicitud = entorno.repo.obtener_solicitud(ejecucion.solicitud_id)
     bloques: list[dict[str, Any]] = []
     for sonda in ctx.estrategia.evidence_probes(solicitud):
-        r = fn_search_docs(ctx.herramientas_ctx, ArgsSearchDocs(dominio=sonda.dominio, consulta=sonda.consulta))
+        with medir(entorno.repo, ejecucion_id, "herramienta", "search_docs") as tramo:
+            tramo.detalle = f"sonda de la estrategia: {sonda.dominio}/{sonda.consulta}"[:200]
+            r = fn_search_docs(ctx.herramientas_ctx, ArgsSearchDocs(dominio=sonda.dominio, consulta=sonda.consulta))
+            tramo.ok = r.ok
         url = f"https://{sonda.dominio}/{sonda.consulta}"
         if r.ok:
             texto = (
@@ -274,10 +278,12 @@ def construir_grafo(entorno: Entorno):
             from emh.harness.contracts import ArgsCloneRepo
             from emh.harness.tools import clone_repo as fn_clone_repo
 
-            r_clone = fn_clone_repo(
-                ctx.herramientas_ctx,
-                ArgsCloneRepo(repositorio_url=solicitud.repositorio_url, commit_referencia=solicitud.commit_referencia),
-            )
+            with medir(entorno.repo, ejecucion_id, "herramienta", "clone_repo") as tramo:
+                r_clone = fn_clone_repo(
+                    ctx.herramientas_ctx,
+                    ArgsCloneRepo(repositorio_url=solicitud.repositorio_url, commit_referencia=solicitud.commit_referencia),
+                )
+                tramo.ok = r_clone.ok
             if not r_clone.ok:
                 _finalizar(entorno, ejecucion_id, ResultadoEjecucion.FALLIDO_CONTROLADO)
                 return estado
@@ -515,7 +521,10 @@ def construir_grafo(entorno: Entorno):
                 return estado
 
             cambios = [CambioArchivoArgs(**c) for c in resultado["cambios"]]
-            r = fn_apply_patch(ctx.herramientas_ctx, ArgsApplyPatch(cambios=cambios), operaciones_permitidas=operaciones)
+            with medir(entorno.repo, ejecucion_id, "herramienta", "apply_patch") as tramo:
+                tramo.detalle = f"{len(cambios)} archivo(s)"
+                r = fn_apply_patch(ctx.herramientas_ctx, ArgsApplyPatch(cambios=cambios), operaciones_permitidas=operaciones)
+                tramo.ok = r.ok
             if r.ok:
                 _avanzar(entorno, ejecucion_id, EstadoEjecucion.APLICANDO_CAMBIOS)
                 mensajes.append({"role": "user", "content": [{"text": f"Parche aplicado: {r.contenido}"}]})
@@ -541,7 +550,10 @@ def construir_grafo(entorno: Entorno):
         secuencia = perfil.instalacion + perfil.verificacion
         linea_base = _linea_base_pruebas(entorno, ejecucion_id)
 
-        r = fn_run_tests(ctx.herramientas_ctx, ArgsRunTests(comandos=secuencia))
+        with medir(entorno.repo, ejecucion_id, "herramienta", "run_tests") as tramo:
+            r = fn_run_tests(ctx.herramientas_ctx, ArgsRunTests(comandos=secuencia))
+            tramo.ok = r.ok
+            tramo.detalle = f"sandbox; código de salida {r.detalles[0]}" if r.ok and r.detalles else None
         if not r.ok:
             _finalizar(entorno, ejecucion_id, ResultadoEjecucion.BLOQUEADO, MotivoBloqueo.ACCION_BLOQUEADA)
             return estado
@@ -623,17 +635,31 @@ def construir_grafo(entorno: Entorno):
         return estado
 
     grafo = StateGraph(EstadoGrafo)
-    grafo.add_node("interpretar_solicitud", nodo_interpretar_solicitud)
-    grafo.add_node("descubrir_repo", nodo_descubrir_repo)
-    grafo.add_node("consultar_fuentes", nodo_consultar_fuentes)
-    grafo.add_node("evaluar_viabilidad", nodo_evaluar_viabilidad)
-    grafo.add_node("proponer_plan", nodo_proponer_plan)
-    grafo.add_node("compuerta_aprobacion", nodo_compuerta_aprobacion)
-    grafo.add_node("generar_cambios", nodo_generar_cambios)
-    grafo.add_node("ejecutar_verificaciones", nodo_ejecutar_verificaciones)
-    grafo.add_node("analizar_error", nodo_analizar_error)
-    grafo.add_node("proponer_correccion", nodo_proponer_correccion)
-    grafo.add_node("construir_reporte", nodo_construir_reporte)
+    def _traceado(nombre, fn):
+        """Cada nodo deja su tramo (nombre, duración, estado al salir)."""
+        def envuelto(estado):
+            ejecucion_id = estado["ejecucion_id"]
+            with medir(entorno.repo, ejecucion_id, "nodo", nombre) as tramo:
+                resultado = fn(estado)
+                try:
+                    tramo.detalle = f"estado: {entorno.repo.obtener_ejecucion(ejecucion_id).estado.value}"
+                except Exception:  # la traza nunca rompe un nodo
+                    pass
+                return resultado
+        envuelto.__name__ = fn.__name__
+        return envuelto
+
+    grafo.add_node("interpretar_solicitud", _traceado("interpretar_solicitud", nodo_interpretar_solicitud))
+    grafo.add_node("descubrir_repo", _traceado("descubrir_repo", nodo_descubrir_repo))
+    grafo.add_node("consultar_fuentes", _traceado("consultar_fuentes", nodo_consultar_fuentes))
+    grafo.add_node("evaluar_viabilidad", _traceado("evaluar_viabilidad", nodo_evaluar_viabilidad))
+    grafo.add_node("proponer_plan", _traceado("proponer_plan", nodo_proponer_plan))
+    grafo.add_node("compuerta_aprobacion", _traceado("compuerta_aprobacion", nodo_compuerta_aprobacion))
+    grafo.add_node("generar_cambios", _traceado("generar_cambios", nodo_generar_cambios))
+    grafo.add_node("ejecutar_verificaciones", _traceado("ejecutar_verificaciones", nodo_ejecutar_verificaciones))
+    grafo.add_node("analizar_error", _traceado("analizar_error", nodo_analizar_error))
+    grafo.add_node("proponer_correccion", _traceado("proponer_correccion", nodo_proponer_correccion))
+    grafo.add_node("construir_reporte", _traceado("construir_reporte", nodo_construir_reporte))
 
     grafo.add_edge(START, "interpretar_solicitud")
     grafo.add_edge("interpretar_solicitud", "descubrir_repo")

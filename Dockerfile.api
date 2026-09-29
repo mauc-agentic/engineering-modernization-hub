@@ -14,10 +14,12 @@ RUN apt-get update \
 WORKDIR /app
 COPY pyproject.toml ./
 COPY emh/ emh/
-RUN pip install --no-cache-dir ".[postgres]"
+RUN pip install --no-cache-dir ".[postgres,observabilidad]"
 
 USER emh
 ENV EMH_DATA_DIR=/data
 EXPOSE 8000
 
-CMD ["uvicorn", "emh.api.app:app_factory", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+# Con AGENT_OBSERVABILITY_ENABLED=true arranca bajo el ADOT (opentelemetry-instrument) y
+# exporta trazas/métricas a CloudWatch (AgentCore Observability); sin ella, uvicorn a secas.
+CMD ["sh", "-c", "if [ \"$AGENT_OBSERVABILITY_ENABLED\" = \"true\" ]; then exec opentelemetry-instrument uvicorn emh.api.app:app_factory --factory --host 0.0.0.0 --port 8000; else exec uvicorn emh.api.app:app_factory --factory --host 0.0.0.0 --port 8000; fi"]

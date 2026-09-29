@@ -125,3 +125,33 @@ def test_ejecucion_inexistente_da_404_con_formato_uniforme(tmp_path, workspace):
     detalle = r.json()["detail"]
     assert detalle["codigo"] == "NO_ENCONTRADO"
     assert detalle["run_id"] == 9999
+
+
+def test_endpoint_traza_devuelve_tramos_y_resumen_sin_contenido(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from emh.api.app import crear_app
+    from emh.bootstrap import Aplicacion
+    from emh.core.models import Traza
+    from tests.factories import ejecucion, solicitud
+
+    app_ = Aplicacion(data_dir=tmp_path, modo_simulado=True)
+    try:
+        s = app_.repo.guardar_solicitud(solicitud())
+        e = app_.repo.guardar_ejecucion(ejecucion(solicitud_id=s.id))
+        app_.repo.guardar_traza(Traza(ejecucion_id=e.id, tipo="nodo", nombre="descubrir_repo", duracion_ms=1200))
+        app_.repo.guardar_traza(Traza(ejecucion_id=e.id, tipo="modelo", nombre="evaluar_viabilidad", duracion_ms=900,
+                                      tokens_entrada=1000, tokens_salida=200))
+        app_.repo.guardar_traza(Traza(ejecucion_id=e.id, tipo="herramienta", nombre="run_tests", duracion_ms=5000, ok=False,
+                                      detalle="TimeoutError"))
+        cliente = TestClient(crear_app(app_))
+        r = cliente.get(f"/ejecuciones/{e.id}/traza")
+        assert r.status_code == 200
+        cuerpo = r.json()
+        assert [t["tipo"] for t in cuerpo["tramos"]] == ["nodo", "modelo", "herramienta"]
+        assert cuerpo["resumen"]["llamadas_modelo"] == 1
+        assert cuerpo["resumen"]["tokens_entrada"] == 1000
+        assert cuerpo["resumen"]["errores"] == 1
+        assert cliente.get("/ejecuciones/99999/traza").status_code == 404
+    finally:
+        app_.cerrar()

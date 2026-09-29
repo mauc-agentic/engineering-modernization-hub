@@ -20,6 +20,7 @@ from emh.core.models import (
     LlamadaModelo,
     Plan,
     Solicitud,
+    Traza,
     Verificacion,
 )
 
@@ -202,6 +203,8 @@ class RunRepository(Protocol):
 
     def guardar_llamada_modelo(self, llamada: LlamadaModelo) -> LlamadaModelo: ...
     def listar_llamadas_modelo(self, ejecucion_id: int) -> list[LlamadaModelo]: ...
+    def guardar_traza(self, traza: Traza) -> Traza: ...
+    def listar_trazas(self, ejecucion_id: int) -> list[Traza]: ...
 
 
 # ---------------------------------------------------------------------------

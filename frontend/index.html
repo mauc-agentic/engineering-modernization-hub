@@ -132,6 +132,20 @@
     border-radius: 16px; font-size: 13px; display: none; max-width: 380px; box-shadow: 0 14px 36px #0B0B6B44; z-index: 10; }
   .toast.show { display: block; }
   .toast.err { background: var(--danger); }
+  .resumen-traza { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .chip { background: var(--card-alt); border-radius: 14px; padding: 8px 14px; font-size: 12px; color: var(--muted); }
+  .chip b { display: block; font-size: 18px; color: var(--navy); line-height: 1.2; }
+  .chip.bad b { color: var(--danger); }
+  .gantt-row { display: grid; grid-template-columns: 250px 1fr 74px; gap: 10px; align-items: center; font-size: 12px; padding: 3px 0; }
+  .gantt-row .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+  .gantt-row .nom.hijo { padding-left: 18px; color: var(--muted); }
+  .gantt-row .nom i { font-style: normal; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+  .gantt-row .dur { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .gantt-track { position: relative; height: 14px; background: #EEF0FF; border-radius: 7px; }
+  .gantt-bar { position: absolute; top: 0; height: 100%; border-radius: 7px; min-width: 4px; }
+  .k-nodo { background: #0B0B6B; } .k-modelo { background: #4A5FEF; } .k-herramienta { background: #8F8AD1; } .k-err { background: #B3163C; }
+  .leyenda { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .leyenda i { font-style: normal; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 0 20px 36px; }
 </style>
 </head>
@@ -261,6 +275,14 @@
     <div class="card" id="card-eventos" style="display:none">
       <h2>Eventos de seguridad</h2>
       <div id="v-eventos"></div>
+    </div>
+
+    <div class="card" id="card-traza" style="display:none">
+      <h2>6 · Traza de ejecución (observabilidad)</h2>
+      <div class="resumen-traza" id="v-traza-resumen"></div>
+      <div class="leyenda"><span><i class="k-nodo"></i>nodo del grafo</span><span><i class="k-modelo"></i>llamada al modelo</span><span><i class="k-herramienta"></i>herramienta</span><span><i class="k-err"></i>error</span></div>
+      <div id="v-traza"></div>
+      <p class="hint">Solo nombres, tiempos y tokens: nunca el contenido de prompts, archivos ni salidas.</p>
     </div>
 
     <div class="card" id="card-reporte" style="display:none">
@@ -410,6 +432,7 @@ async function actualizar() {
     await cargarPlan(e.estado);
     await cargarVerificaciones();
     await cargarEventos();
+    await cargarTraza();
     if (e.resultado) {
       await cargarReporte();
       clearInterval(pollHandle);
@@ -487,6 +510,32 @@ async function cargarEventos() {
     '<div class="evento">' + badge(ev.severidad, 'bad') + ' <span class="mono">' + escapeHtml(ev.regla) + '</span><br>' +
     escapeHtml(ev.accion_intentada) + '<div class="hint">origen: ' + escapeHtml(ev.origen) + '</div></div>'
   ).join('');
+}
+
+function fmtMs(ms) { return ms >= 1000 ? (ms / 1000).toFixed(1) + ' s' : ms + ' ms'; }
+
+async function cargarTraza() {
+  const t = await api('/ejecuciones/' + ejecucionId + '/traza');
+  if (!t.tramos.length) return;
+  $('card-traza').style.display = 'block';
+  const r = t.resumen, total = Math.max(r.duracion_total_ms, 1);
+  $('v-traza-resumen').innerHTML =
+    '<div class="chip"><b>' + fmtMs(r.duracion_total_ms) + '</b>duración total</div>' +
+    '<div class="chip"><b>' + r.llamadas_modelo + '</b>llamadas al modelo</div>' +
+    '<div class="chip"><b>' + r.llamadas_herramienta + '</b>herramientas</div>' +
+    '<div class="chip"><b>' + (r.tokens_entrada + r.tokens_salida).toLocaleString('es') + '</b>tokens (' + r.tokens_entrada.toLocaleString('es') + ' ent. / ' + r.tokens_salida.toLocaleString('es') + ' sal.)</div>' +
+    '<div class="chip' + (r.errores ? ' bad' : '') + '"><b>' + r.errores + '</b>errores</div>';
+  $('v-traza').innerHTML = t.tramos.map(x => {
+    const izq = Math.min(x.desplazamiento_ms / total * 100, 99.4);
+    const ancho = Math.max(x.duracion_ms / total * 100, 0.6);
+    const clase = x.ok ? 'k-' + x.tipo : 'k-err';
+    const titulo = escapeHtml(x.tipo + ' · ' + x.nombre + (x.detalle ? ' · ' + x.detalle : '') +
+      (x.tokens_entrada ? ' · ' + x.tokens_entrada + '/' + x.tokens_salida + ' tokens' : ''));
+    const etiqueta = x.tipo === 'nodo' ? x.nombre : (x.tipo === 'modelo' ? 'modelo (Nova 2 Lite)' : x.nombre);
+    return '<div class="gantt-row" title="' + titulo + '"><div class="nom' + (x.tipo === 'nodo' ? '' : ' hijo') + '"><i class="' + clase + '"></i>' + escapeHtml(etiqueta) +
+      '</div><div class="gantt-track"><div class="gantt-bar ' + clase + '" style="left:' + izq + '%;width:' + Math.min(ancho, 100 - izq) + '%"></div></div>' +
+      '<div class="dur">' + fmtMs(x.duracion_ms) + '</div></div>';
+  }).join('');
 }
 
 async function cargarReporte() {

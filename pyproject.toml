@@ -24,8 +24,10 @@ dev = [
     "httpx>=0.27",
     "import-linter>=2.1",
     "ruff>=0.7",
+    "opentelemetry-sdk>=1.27",
 ]
 postgres = ["psycopg[binary]>=3.2"]
+observabilidad = ["aws-opentelemetry-distro>=0.18.0"]  # ADOT: telemetría a CloudWatch / AgentCore Observability
 
 [build-system]
 requires = ["hatchling"]

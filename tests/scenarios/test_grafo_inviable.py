@@ -142,7 +142,7 @@ def test_si_el_modelo_no_normaliza_el_objetivo_el_flujo_continua_con_el_original
     la ejecución ni dejar nodos corriendo con el historial vacío."""
     en_prosa = RespuestaModelo(texto="No puedo ayudar con eso.", llamadas_herramienta=[], tokens_entrada=100, tokens_salida=10)
     guion = [
-        en_prosa,
+        en_prosa, en_prosa, en_prosa,  # 1 intento + 2 reintentos (NFR-008) antes de seguir con el objetivo original
         _r("t2", "listo", {"resumen": "requirements.txt tiene Flask==2.0.3"}),
         _r("t3", "listo", {"resumen": "Flask 3.0.0 requiere Python >=3.8"}),
         _r("t4", "veredicto_viabilidad", {"veredicto": "INVIABLE", "impacto_detectado": "runtime 3.7 < 3.8", "evidencia": "PyPI"}),
@@ -171,5 +171,44 @@ def test_si_la_ejecucion_ya_termino_los_nodos_siguientes_no_llaman_al_modelo(tmp
         final = repo.obtener_ejecucion(e.id)
         assert final.resultado is ResultadoEjecucion.PRESUPUESTO_AGOTADO
         assert "error inesperado" not in caplog.text
+    finally:
+        repo.close()
+
+
+def test_una_salida_no_valida_del_modelo_se_reintenta_y_se_recupera(tmp_path, workspace):
+    """NFR-008: si el modelo no entrega la herramienta esperada, se reintenta (hasta 2 veces)
+    con un recordatorio, y el flujo continúa si el reintento acierta."""
+    en_prosa = RespuestaModelo(texto="Claro, dime más.", llamadas_herramienta=[], tokens_entrada=100, tokens_salida=10)
+    guion = [
+        en_prosa,  # intento 1 de interpretar_solicitud: sin herramienta
+        _r("t1", "objetivo_interpretado", {"objetivo_normalizado": "Actualizar Flask a 3.0"}),  # reintento OK
+        _r("t2", "listo", {"resumen": "Flask==2.0.3 y python-3.7.13"}),
+        _r("t3", "listo", {"resumen": "Flask 3 requiere Python >=3.8"}),
+        _r("t4", "veredicto_viabilidad", {"veredicto": "INVIABLE", "impacto_detectado": "3.7 < 3.8", "evidencia": "PyPI"}),
+    ]
+    repo, e, entorno = _repo_y_entorno(tmp_path, workspace, guion)
+    try:
+        LangGraphAgentRunner(entorno).run(e.id)
+        assert repo.obtener_ejecucion(e.id).motivo_bloqueo is MotivoBloqueo.INVIABLE
+        segunda = entorno.modelo.mensajes_recibidos[1]
+        assert "No invocaste la herramienta 'objetivo_interpretado'" in str(segunda)
+    finally:
+        repo.close()
+
+
+def test_tras_agotar_los_reintentos_la_salida_no_valida_termina_de_forma_controlada(tmp_path, workspace):
+    """NFR-008: agotados 1 intento + 2 reintentos, la ejecución NO queda colgada: termina en uno de
+    los cinco resultados (aquí, la viabilidad sin veredicto -> FALLIDO_CONTROLADO)."""
+    en_prosa = RespuestaModelo(texto="No sé.", llamadas_herramienta=[], tokens_entrada=100, tokens_salida=10)
+    guion = [
+        _r("t1", "objetivo_interpretado", {"objetivo_normalizado": "x"}),
+        _r("t2", "listo", {"resumen": "a"}), _r("t3", "listo", {"resumen": "b"}),
+        en_prosa, en_prosa, en_prosa,  # evaluar_viabilidad: 3 intentos sin herramienta
+    ]
+    repo, e, entorno = _repo_y_entorno(tmp_path, workspace, guion)
+    try:
+        LangGraphAgentRunner(entorno).run(e.id)
+        assert repo.obtener_ejecucion(e.id).resultado is ResultadoEjecucion.FALLIDO_CONTROLADO
+        assert len(entorno.modelo.mensajes_recibidos) == 6  # ni un intento más
     finally:
         repo.close()

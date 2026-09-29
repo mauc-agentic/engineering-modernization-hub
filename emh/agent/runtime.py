@@ -117,6 +117,19 @@ def _asegurar_termina_en_turno_de_usuario(
     return mensajes
 
 
+REINTENTOS_SALIDA_NO_VALIDA = 2  # NFR-008: salida que no cumple el esquema -> hasta 2 reintentos
+
+
+def _con_recordatorio(mensajes: list[dict[str, Any]], texto: str) -> list[dict[str, Any]]:
+    """Añade el recordatorio al último turno de usuario (Converse exige roles alternados)."""
+    copia = [dict(m) for m in mensajes]
+    if copia and copia[-1]["role"] == "user":
+        copia[-1] = {"role": "user", "content": [*copia[-1]["content"], {"text": texto}]}
+    else:
+        copia.append({"role": "user", "content": [{"text": texto}]})
+    return copia
+
+
 def pedir_estructurado(
     ctx: ContextoAgente,
     nodo: str,
@@ -132,16 +145,20 @@ def pedir_estructurado(
     esquema ES el resultado que necesitamos. Evita parseo de texto libre."""
     mensajes = _asegurar_termina_en_turno_de_usuario(mensajes)
     herramientas = [_tool_spec(nombre_tool, descripcion_tool, json_schema)]
-    respuesta = llamar_modelo(
-        ctx, nodo, mensajes, sistema=sistema, herramientas=herramientas, nivel_esfuerzo=nivel_esfuerzo
-    )
-    for llamada in respuesta.llamadas_herramienta:
-        if llamada.nombre == nombre_tool:
-            return llamada.argumentos
-    logger.warning("ejecución %s, nodo %s: el modelo no invocó la herramienta '%s' (respondió %s)",
-                   ctx.ejecucion_id, nodo, nombre_tool, "texto" if respuesta.texto else "vacío")
+    for intento in range(1 + REINTENTOS_SALIDA_NO_VALIDA):
+        respuesta = llamar_modelo(
+            ctx, nodo, mensajes, sistema=sistema, herramientas=herramientas, nivel_esfuerzo=nivel_esfuerzo
+        )
+        for llamada in respuesta.llamadas_herramienta:
+            if llamada.nombre == nombre_tool:
+                return llamada.argumentos
+        logger.warning("ejecución %s, nodo %s: el modelo no invocó la herramienta '%s' (respondió %s); intento %d de %d",
+                       ctx.ejecucion_id, nodo, nombre_tool, "texto" if respuesta.texto else "vacío",
+                       intento + 1, 1 + REINTENTOS_SALIDA_NO_VALIDA)
+        mensajes = _con_recordatorio(mensajes, f"No invocaste la herramienta '{nombre_tool}'. Responde SOLO invocándola.")
     raise ErrorSalidaModelo(
         f"nodo {nodo}: el modelo no invocó la herramienta '{nombre_tool}' esperada"
+        f" tras {1 + REINTENTOS_SALIDA_NO_VALIDA} intentos"
     )
 
 

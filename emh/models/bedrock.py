@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Any
 
 import boto3
+from botocore.config import Config
 
 from emh.core.ports import (  # noqa: F401
     LlamadaHerramientaPropuesta,
@@ -16,6 +17,11 @@ from emh.core.ports import (  # noqa: F401
 )
 
 MODEL_ID_DEFECTO = "us.amazon.nova-2-lite-v1:0"
+
+# NFR-008: ante límite de tasa o error transitorio, hasta 3 reintentos (4 intentos en total) con espera
+# exponencial y *jitter* (modo `standard` de botocore). Agotados, la excepción sube y la ejecución
+# termina FALLIDO_CONTROLADO (RN-11).
+REINTENTOS_TRANSITORIOS = 3
 REGION_DEFECTO = "us-east-1"
 
 
@@ -27,7 +33,10 @@ class BedrockModel:
         cliente: Any | None = None,
     ) -> None:
         self._model_id = model_id
-        self._cliente = cliente or boto3.client("bedrock-runtime", region_name=region)
+        self._cliente = cliente or boto3.client(
+            "bedrock-runtime", region_name=region,
+            config=Config(retries={"max_attempts": REINTENTOS_TRANSITORIOS, "mode": "standard"}),  # cuenta REINTENTOS
+        )
 
     def completar(
         self,

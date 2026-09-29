@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# Hook local de NFR-022. Instalar una vez:  git config core.hooksPath scripts/hooks
+exec python3 "$(dirname "$0")/../verificar_commits.py" --archivo "$1"

@@ -38,6 +38,20 @@ jobs:
       - name: Pruebas (Docker real y Postgres real; sin las de Bedrock, que necesitan credenciales)
         run: pytest -q -m "not live"
 
+  commits:
+    name: commits
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Los commits de implementación citan un ID del catálogo (NFR-022)
+        env:
+          RANGO: ${{ github.event_name == 'pull_request' && format('origin/{0}..HEAD', github.base_ref) || format('{0}..{1}', github.event.before, github.sha) }}
+        run: python3 scripts/verificar_commits.py "$RANGO"
+
   terraform:
     name: terraform
     runs-on: ubuntu-latest

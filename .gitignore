@@ -13,3 +13,4 @@ infra/terraform.tfvars
 # infra/.terraform.lock.hcl SÍ se versiona (buena práctica de Terraform:
 # fija las versiones exactas de provider que ya se validaron).
 data/
+*.tfplan

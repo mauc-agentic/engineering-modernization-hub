@@ -75,6 +75,16 @@ resource "aws_ecs_service" "api" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
+  health_check_grace_period_seconds = 90
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.api.arn
+    container_name   = "api"
+    container_port   = 8000
+  }
+
+  depends_on = [aws_lb_listener_rule.solo_cloudfront]
+
   network_configuration {
     subnets          = aws_subnet.publica[*].id
     security_groups  = [aws_security_group.api.id]

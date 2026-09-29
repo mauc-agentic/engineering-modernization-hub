@@ -74,6 +74,12 @@ variable "cidr_acceso_api" {
   }
 }
 
+variable "usuario_web" {
+  description = "Usuario de la autenticación HTTP básica de la URL pública (la contraseña la genera Terraform: `terraform output -raw contrasena_web`)."
+  type        = string
+  default     = "wenia"
+}
+
 variable "sandbox_imagen_tag" {
   type    = string
   default = "latest"

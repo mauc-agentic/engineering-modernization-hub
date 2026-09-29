@@ -3,105 +3,161 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Engineering Modernization Hub</title>
+<title>Engineering Modernization Hub · Wenia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&display=swap">
 <style>
+  /* Paleta inspirada en la marca Wenia: azul marino, azul rey, degradado a lila/rosa. */
   :root {
-    --ink: #14241D;
-    --muted: #4A5750;
-    --bg: #FAFAF7;
+    --navy: #0B0B6B;
+    --navy-deep: #00005A;
+    --royal: #4A5FEF;
+    --royal-dark: #3446D6;
+    --lilac: #8F8AD1;
+    --pink: #D79BC8;
+    --ink: #10104A;
+    --muted: #5A5E86;
+    --bg: #F4F5FC;
     --card: #FFFFFF;
-    --line: #DCE6E1;
-    --accent: #2F7D6B;
-    --accent-dark: #122019;
-    --danger: #B5482E;
-    --ok: #2F7D6B;
-    --warn: #C9A227;
-    --card-alt: #EEF3F0;
+    --line: #E1E4F6;
+    --card-alt: #F0F2FF;
+    --ok: #0F7A55; --ok-bg: #DDF5EA;
+    --warn: #8A5A00; --warn-bg: #FFF0D2;
+    --danger: #B3163C; --danger-bg: #FDE4EA;
+    --info: #3446D6; --info-bg: #E6E9FF;
   }
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
     margin: 0; background: var(--bg); color: var(--ink);
-    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
-    font-size: 16px;
+    font-family: "Open Sans", "Segoe UI", Roboto, sans-serif; font-size: 16px;
   }
   code, .mono { font-family: "SF Mono", Menlo, Consolas, monospace; }
-  header {
-    background: var(--accent-dark); color: #FAFAF7; padding: 20px 32px;
-    display: flex; align-items: center; justify-content: space-between; gap: 24px;
+
+  /* Barra superior: blanca, con la marca de texto */
+  .topbar {
+    background: #fff; height: 76px; padding: 0 40px; display: flex; align-items: center;
+    justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 5;
   }
-  header h1 { font-size: 20px; margin: 0; font-weight: 600; }
-  header .sub { font-size: 13px; color: #8FB3A9; }
-  header .conn { display: flex; align-items: center; gap: 10px; font-size: 13px; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: #666; }
-  .dot.ok { background: #5FBFA3; }
-  .dot.bad { background: var(--danger); }
-  header input {
-    background: #1B332B; border: 1px solid #2D5C4D; color: #FAFAF7;
-    padding: 6px 10px; border-radius: 8px; font-size: 13px; width: 220px;
+  .brand { display: flex; align-items: baseline; gap: 14px; }
+  .brand .wordmark { font-size: 34px; font-weight: 800; letter-spacing: -1px; color: var(--navy); line-height: 1; }
+  .brand .product { font-size: 14px; font-weight: 600; color: var(--muted); padding-left: 14px; border-left: 2px solid var(--line); }
+  .conn { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #B8BBD8; }
+  .dot.ok { background: #19B37B; box-shadow: 0 0 0 4px #19B37B22; }
+  .dot.bad { background: var(--danger); box-shadow: 0 0 0 4px #B3163C22; }
+  details.avanzado { position: relative; }
+  details.avanzado summary { cursor: pointer; font-size: 12px; color: var(--royal); list-style: none; }
+  details.avanzado summary::-webkit-details-marker { display: none; }
+  details.avanzado div { position: absolute; right: 0; top: 24px; background: #fff; border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px; width: 300px; box-shadow: 0 12px 32px #0B0B6B22; }
+
+  /* Hero: degradado azul marino → azul rey → lila → rosa */
+  .hero {
+    position: relative; overflow: hidden; color: #fff; padding: 56px 40px 40px;
+    background:
+      radial-gradient(900px 420px at 88% 118%, #D79BC8 0%, transparent 62%),
+      radial-gradient(700px 380px at 96% 20%, #4A5FEF 0%, transparent 65%),
+      radial-gradient(520px 320px at 2% 0%, #8F8AD1aa 0%, transparent 70%),
+      linear-gradient(115deg, var(--navy-deep) 0%, #0A0A8C 45%, #3245D8 100%);
   }
-  main { display: grid; grid-template-columns: 380px 1fr; gap: 24px; padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+  .hero-inner { max-width: 1400px; margin: 0 auto; }
+  .hero .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #C9CEFF; }
+  .hero h1 { font-size: clamp(30px, 4.2vw, 52px); line-height: 1.08; margin: 10px 0 12px; font-weight: 800; max-width: 900px; }
+  .hero p.lead { font-size: 18px; margin: 0; max-width: 720px; color: #E6E8FF; }
+
+  /* Indicador de avance por pasos */
+  .steps { display: flex; gap: 8px; margin-top: 34px; flex-wrap: wrap; }
+  .step {
+    display: flex; align-items: center; gap: 10px; padding: 9px 16px 9px 10px; border-radius: 999px;
+    background: #ffffff1c; color: #DDE0FF; font-size: 13px; font-weight: 600; border: 1px solid #ffffff2e;
+  }
+  .step .n { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+    background: #ffffff2a; font-size: 12px; font-weight: 700; }
+  .step.done { background: #ffffff; color: var(--navy); }
+  .step.done .n { background: var(--royal); color: #fff; }
+  .step.active { background: #fff; color: var(--navy); box-shadow: 0 0 0 4px #ffffff40; }
+  .step.active .n { background: var(--navy); color: #fff; }
+  .step.stop .n { background: var(--danger); color: #fff; }
+
+  main { display: grid; grid-template-columns: 400px 1fr; gap: 28px; padding: 32px 40px 64px; max-width: 1480px; margin: 0 auto; }
+  @media (max-width: 980px) { main { grid-template-columns: 1fr; padding: 20px; } .topbar, .hero { padding-left: 20px; padding-right: 20px; } }
+
   .card {
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-    padding: 22px; margin-bottom: 20px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 22px;
+    padding: 26px; margin-bottom: 22px; box-shadow: 0 10px 30px #0B0B6B0d;
   }
-  .card h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin: 0 0 16px; }
-  label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .12em; color: var(--royal); margin: 0 0 18px; font-weight: 800; }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 14px 0 5px; }
   input, textarea, select {
-    width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px;
-    font-size: 14px; font-family: inherit; color: var(--ink);
+    width: 100%; padding: 11px 13px; border: 1.5px solid var(--line); border-radius: 12px;
+    font-size: 14px; font-family: inherit; color: var(--ink); background: #fff; transition: border-color .15s, box-shadow .15s;
   }
-  textarea { resize: vertical; min-height: 50px; }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--royal); box-shadow: 0 0 0 4px #4A5FEF22; }
+  textarea { resize: vertical; min-height: 54px; }
   button {
-    cursor: pointer; border: none; border-radius: 8px; padding: 10px 16px;
-    font-size: 14px; font-weight: 600; font-family: inherit;
+    cursor: pointer; border: none; border-radius: 999px; padding: 12px 24px;
+    font-size: 14px; font-weight: 700; font-family: inherit; transition: background .15s, transform .05s;
   }
-  button.primary { background: var(--accent); color: #fff; }
-  button.primary:hover { background: #24614F; }
-  button.danger { background: var(--danger); color: #fff; }
-  button.danger:hover { background: #8F3A24; }
-  button.ghost { background: var(--card-alt); color: var(--ink); }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-  .row { display: flex; gap: 10px; margin-top: 14px; }
-  .badge {
-    display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px;
-    font-weight: 600; letter-spacing: 0.02em;
-  }
-  .badge.info { background: #E4ECEA; color: var(--accent); }
-  .badge.ok { background: #DCF3EA; color: #1F5C4C; }
-  .badge.warn { background: #FBF0D6; color: #8A6B10; }
-  .badge.bad { background: #FBE4DD; color: var(--danger); }
-  .kv { display: grid; grid-template-columns: 160px 1fr; gap: 6px 12px; font-size: 14px; }
-  .kv div:nth-child(odd) { color: var(--muted); }
-  .empty { color: var(--muted); font-size: 14px; font-style: italic; }
-  ul.plain { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6; }
-  .verif { border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 10px; background: var(--card-alt); }
-  .verif.ok { border-color: #BFE3D5; }
-  .verif.bad { border-color: #F0C9BC; }
-  .verif pre { white-space: pre-wrap; font-size: 12px; margin: 8px 0 0; max-height: 160px; overflow: auto; background: #14241D0d; padding: 8px; border-radius: 6px; }
-  .evento { border-left: 4px solid var(--danger); padding: 10px 14px; margin-bottom: 8px; background: #FBE4DD33; font-size: 13px; }
-  .fuente-cita { font-size: 12px; color: var(--accent); margin-top: 4px; }
-  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
-  .toast {
-    position: fixed; bottom: 24px; right: 24px; background: var(--accent-dark); color: #fff;
-    padding: 12px 18px; border-radius: 10px; font-size: 13px; display: none; max-width: 360px;
-  }
+  button:active { transform: translateY(1px); }
+  button.primary { background: var(--royal); color: #fff; }
+  button.primary:hover { background: var(--royal-dark); }
+  button.danger { background: #fff; color: var(--danger); box-shadow: inset 0 0 0 2px var(--danger); }
+  button.danger:hover { background: var(--danger-bg); }
+  button.ghost { background: var(--card-alt); color: var(--royal); }
+  button.ghost:hover { background: #E3E7FF; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .row { display: flex; gap: 12px; margin-top: 16px; }
+  .badge { display: inline-block; padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+  .badge.info { background: var(--info-bg); color: var(--info); }
+  .badge.ok { background: var(--ok-bg); color: var(--ok); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .badge.bad { background: var(--danger-bg); color: var(--danger); }
+  .kv { display: grid; grid-template-columns: 150px 1fr; gap: 10px 14px; font-size: 14px; align-items: center; }
+  .kv div:nth-child(odd) { color: var(--muted); font-weight: 600; }
+  .empty { color: var(--muted); font-size: 14px; }
+  ul.plain { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.7; }
+  .verif { border: 1.5px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 12px; background: var(--card-alt); font-size: 14px; }
+  .verif.ok { border-color: #A9E2CB; background: #F1FBF6; }
+  .verif.bad { border-color: #F3B7C5; background: #FFF6F8; }
+  .verif pre { white-space: pre-wrap; font-size: 12px; margin: 10px 0 0; max-height: 170px; overflow: auto; background: #0B0B6B0a; padding: 10px; border-radius: 10px; }
+  .evento { border-left: 5px solid var(--danger); padding: 12px 16px; margin-bottom: 10px; background: var(--danger-bg); border-radius: 0 12px 12px 0; font-size: 13px; }
+  .hint { font-size: 13px; color: var(--muted); margin: 8px 0 0; line-height: 1.55; }
+  .hint b { color: var(--ink); }
+  .toast { position: fixed; bottom: 26px; right: 26px; background: var(--navy); color: #fff; padding: 14px 20px;
+    border-radius: 16px; font-size: 13px; display: none; max-width: 380px; box-shadow: 0 14px 36px #0B0B6B44; z-index: 10; }
   .toast.show { display: block; }
   .toast.err { background: var(--danger); }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 0 20px 36px; }
 </style>
 </head>
 <body>
 
-<header>
-  <div>
-    <h1>Engineering Modernization Hub</h1>
-    <div class="sub">Dashboard de demo — habla directo con la API real (F1)</div>
+<header class="topbar">
+  <div class="brand">
+    <span class="wordmark">Wenia</span>
+    <span class="product">Engineering Modernization Hub</span>
   </div>
   <div class="conn">
     <span class="dot" id="dot"></span>
     <span id="conn-text">sin conexión</span>
-    <input id="api-base" value="http://localhost:8000" spellcheck="false">
+    <details class="avanzado">
+      <summary>conexión ▾</summary>
+      <div><label style="margin-top:0">URL de la API</label><input id="api-base" spellcheck="false"></div>
+    </details>
   </div>
 </header>
+
+<section class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow">Modernización de repositorios con IA</div>
+    <h1>Moderniza tu código con IA. Tú decides qué se aplica.</h1>
+    <p class="lead">El modelo propone. El código dispone: permisos, rutas, presupuesto y pruebas los controla la plataforma, no la IA.</p>
+    <div class="steps" id="steps"></div>
+  </div>
+</section>
+
 
 <main>
   <!-- Columna izquierda: registrar solicitud -->
@@ -214,12 +270,39 @@
   </div>
 </main>
 
+<footer>Prototipo del caso de estudio Staff AI Platform Engineer · Amazon Nova 2 Lite · LangGraph · AWS</footer>
+
 <div class="toast" id="toast"></div>
 
 <script>
 const $ = (id) => document.getElementById(id);
 let ejecucionId = null;
 let pollHandle = null;
+
+// Servido por http(s) (CloudFront) la API está en el mismo origen; como archivo local, en localhost.
+$('api-base').value = (location.protocol.startsWith('http') && !['localhost', '127.0.0.1'].includes(location.hostname))
+  ? location.origin : 'http://localhost:8000';
+
+const PASOS = ['Solicitud', 'Descubrir y analizar', 'Plan', 'Aprobación', 'Cambios y pruebas', 'Reporte'];
+const PASO_POR_ESTADO = {
+  DESCUBRIMIENTO: 1, ANALISIS: 1, PLANEACION: 2, ESPERANDO_APROBACION: 3,
+  APLICANDO_CAMBIOS: 4, VERIFICANDO: 4, CORRIGIENDO: 4, FINALIZADA: 5,
+};
+function pintarPasos(estado, resultado) {
+  const actual = estado ? (PASO_POR_ESTADO[estado] ?? 0) : -1;
+  const termino = estado === 'FINALIZADA';
+  const fallo = termino && resultado && resultado !== 'LISTO_PARA_REVISION' && resultado !== 'COMPLETADO_PARCIALMENTE';
+  $('steps').innerHTML = PASOS.map((p, i) => {
+    let clase = '';
+    if (actual >= 0) {
+      if (termino) clase = (fallo && i === actual) ? 'stop' : 'done';
+      else if (i < actual) clase = 'done';
+      else if (i === actual) clase = 'active';
+    }
+    return '<div class="step ' + clase + '"><span class="n">' + (clase === 'done' ? '✓' : (i + 1)) + '</span>' + p + '</div>';
+  }).join('');
+}
+pintarPasos(null);
 
 function apiBase() { return $('api-base').value.replace(/\/$/, ''); }
 
@@ -304,6 +387,7 @@ async function actualizar() {
   if (!ejecucionId) return;
   try {
     const e = await api('/ejecuciones/' + ejecucionId);
+    pintarPasos(e.estado, e.resultado);
     $('v-estado').innerHTML = badge(e.estado, 'info');
     $('v-resultado').innerHTML = resultadoBadge(e.resultado) + (e.motivo_bloqueo ? ' ' + badge(e.motivo_bloqueo, 'bad') : '');
     $('v-iter').textContent = e.iteraciones_usadas;

@@ -10,6 +10,20 @@ output "ecs_cluster_arn" {
   value = aws_ecs_cluster.principal.arn
 }
 
+output "url_web" {
+  description = "URL pública HTTPS del dashboard y de la API (autenticación básica)."
+  value       = "https://${aws_cloudfront_distribution.web.domain_name}"
+}
+
+output "usuario_web" {
+  value = var.usuario_web
+}
+
+output "contrasena_web" {
+  value     = random_password.web.result
+  sensitive = true
+}
+
 output "ecs_cluster_nombre" {
   value = aws_ecs_cluster.principal.name
 }

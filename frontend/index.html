@@ -184,6 +184,8 @@
       <p class="hint">hash: <span class="mono" id="v-hash"></span></p>
       <ul class="plain" id="v-pasos"></ul>
       <p class="hint">Rutas: <span class="mono" id="v-rutas"></span></p>
+      <p class="hint">Verificaciones: <span class="mono" id="v-comandos"></span></p>
+      <p class="hint">Riesgos: <span id="v-riesgos"></span></p>
       <label>Aprobador</label>
       <input id="f-aprobador" value="dev:tu-correo@example.com">
       <div class="row">
@@ -248,7 +250,7 @@ function setConn(ok) {
 }
 
 function badge(text, kind) {
-  return '<span class="badge ' + kind + '">' + text + '</span>';
+  return '<span class="badge ' + kind + '">' + escapeHtml(String(text)) + '</span>';
 }
 
 function resultadoBadge(resultado) {
@@ -336,8 +338,10 @@ async function cargarPlan(estado) {
     const p = await api('/ejecuciones/' + ejecucionId + '/plan');
     $('card-plan').style.display = 'block';
     $('v-hash').textContent = p.hash;
-    $('v-pasos').innerHTML = p.pasos.map(x => '<li>' + x + '</li>').join('');
+    $('v-pasos').innerHTML = p.pasos.map(x => '<li>' + escapeHtml(String(x)) + '</li>').join('');
     $('v-rutas').textContent = p.rutas_declaradas.join(', ');
+    $('v-comandos').textContent = (p.comandos_verificacion || []).join(' ; ');
+    $('v-riesgos').textContent = (Array.isArray(p.riesgos) ? p.riesgos.join(' · ') : p.riesgos) || 'ninguno declarado';
     const habilitar = estado === 'ESPERANDO_APROBACION';
     $('btn-aprobar').disabled = !habilitar;
     $('btn-rechazar').disabled = !habilitar;
@@ -371,7 +375,7 @@ async function cargarVerificaciones() {
   $('v-verificaciones').innerHTML = vs.map(v =>
     '<div class="verif ' + (v.resultado === 'EXITOSA' ? 'ok' : 'bad') + '">' +
     badge(v.resultado, v.resultado === 'EXITOSA' ? 'ok' : 'bad') +
-    ' <span class="mono">' + v.comando + '</span>' +
+    ' <span class="mono">' + escapeHtml(v.comando) + '</span>' +
     ' — pruebas ' + v.pruebas_exitosas + '/' + v.pruebas_totales +
     ' (código ' + v.codigo_salida + ')' +
     '<pre>' + escapeHtml(v.salida_capturada.slice(0, 800)) + '</pre></div>'
@@ -383,8 +387,8 @@ async function cargarEventos() {
   if (!evs.length) return;
   $('card-eventos').style.display = 'block';
   $('v-eventos').innerHTML = evs.map(ev =>
-    '<div class="evento">' + badge(ev.severidad, 'bad') + ' <span class="mono">' + ev.regla + '</span><br>' +
-    escapeHtml(ev.accion_intentada) + '<div class="hint">origen: ' + ev.origen + '</div></div>'
+    '<div class="evento">' + badge(ev.severidad, 'bad') + ' <span class="mono">' + escapeHtml(ev.regla) + '</span><br>' +
+    escapeHtml(ev.accion_intentada) + '<div class="hint">origen: ' + escapeHtml(ev.origen) + '</div></div>'
   ).join('');
 }
 
@@ -393,15 +397,15 @@ async function cargarReporte() {
   $('card-reporte').style.display = 'block';
   $('v-narrativa').textContent = r.narrativa + (r.narrativa_generada_por_ia ? ' (redactado por IA)' : ' (resumen determinista)');
   $('v-fuentes').innerHTML = r.fuentes.length
-    ? '<p class="hint"><b>Fuentes:</b> ' + r.fuentes.map(f => f.url).join(' · ') + '</p>' : '';
+    ? '<p class="hint"><b>Fuentes:</b> ' + r.fuentes.map(f => escapeHtml(String(f.url))).join(' · ') + '</p>' : '';
   $('v-decisiones').innerHTML = r.decisiones_tecnicas.map(d =>
-    '<p class="hint">' + (d.sustentada ? '✓' : '⚠ sin sustento') + ' ' + d.descripcion + '</p>'
+    '<p class="hint">' + (d.sustentada ? '✓' : '⚠ sin sustento') + ' ' + escapeHtml(String(d.descripcion)) + '</p>'
   ).join('');
   $('v-cambios').textContent = r.cambios.length ? 'Cambios: ' + r.cambios.join(', ') : 'Sin cambios aplicados.';
 }
 
 function escapeHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // Ping inicial de conexión

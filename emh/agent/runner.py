@@ -5,11 +5,17 @@ verdad del estado de negocio (DOCS/03-arquitectura.md §3.1)."""
 
 from __future__ import annotations
 
+import logging
+from collections.abc import Callable
+
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import Command
 
-from emh.agent.graph import Entorno, construir_grafo
+from emh.agent.graph import Entorno, _finalizar, construir_grafo
+from emh.core.models import ResultadoEjecucion
+
+logger = logging.getLogger(__name__)
 
 
 class LangGraphAgentRunner:
@@ -21,14 +27,29 @@ class LangGraphAgentRunner:
     def _config(self, ejecucion_id: int) -> dict:
         return {"configurable": {"thread_id": str(ejecucion_id)}}
 
+    def _controlado(self, ejecucion_id: int, accion: Callable[[], object]) -> None:
+        """RN-11: una excepción inesperada (Bedrock, red, el sandbox de nube)
+        no deja la ejecución colgada en un estado intermedio: termina como
+        FALLIDO_CONTROLADO y el detalle queda en el log del servicio."""
+        try:
+            accion()
+        except Exception:
+            logger.exception("ejecución %s: error inesperado; se finaliza de forma controlada", ejecucion_id)
+            try:
+                _finalizar(self._entorno, ejecucion_id, ResultadoEjecucion.FALLIDO_CONTROLADO)
+            except Exception:
+                logger.exception("ejecución %s: no se pudo registrar el cierre controlado", ejecucion_id)
+
     def run(self, ejecucion_id: int) -> None:
-        self._grafo.invoke(
+        self._controlado(ejecucion_id, lambda: self._grafo.invoke(
             {"ejecucion_id": ejecucion_id, "mensajes": [], "archivos_relevantes": []},
             config=self._config(ejecucion_id),
-        )
+        ))
 
     def resume(self, ejecucion_id: int) -> None:
         """Reanuda tras la interrupción de `compuerta_aprobacion`. La
         decisión real ya está persistida (RN-01); este `Command.resume` solo
         despierta al grafo -- el nodo relee la decisión desde `repo`."""
-        self._grafo.invoke(Command(resume=True), config=self._config(ejecucion_id))
+        self._controlado(ejecucion_id, lambda: self._grafo.invoke(
+            Command(resume=True), config=self._config(ejecucion_id)
+        ))

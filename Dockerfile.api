@@ -1,15 +1,23 @@
-# Imagen de la API (ADR-006, ECS Fargate). Build:
+# Imagen de la API (ADR-006, ECS Fargate ARM64). Build:
 #   docker build -f Dockerfile.api -t emh-api .
+# `git` clona el repositorio objetivo; `pip` (ya en la imagen base) descarga el
+# wheelhouse que viaja al sandbox. Corre sin privilegios de root.
 
 FROM python:3.12-slim
 
-WORKDIR /app
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd --uid 1000 --create-home emh \
+ && mkdir /data && chown emh:emh /data
 
+WORKDIR /app
 COPY pyproject.toml ./
 COPY emh/ emh/
+RUN pip install --no-cache-dir ".[postgres]"
 
-RUN pip install --no-cache-dir .
-
+USER emh
+ENV EMH_DATA_DIR=/data
 EXPOSE 8000
 
 CMD ["uvicorn", "emh.api.app:app_factory", "--factory", "--host", "0.0.0.0", "--port", "8000"]

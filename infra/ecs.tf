@@ -29,12 +29,22 @@ resource "aws_ecs_task_definition" "api" {
   execution_role_arn       = aws_iam_role.ejecucion.arn
   task_role_arn            = aws_iam_role.tarea_api.arn
 
+  # ARM64 (Graviton): ~20 % más barato que x86 y coincide con la plataforma
+  # de las imágenes construidas en Apple Silicon. El wheelhouse se descarga
+  # para la arquitectura de ESTE proceso, que es la misma que la del sandbox.
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "ARM64"
+  }
+
   container_definitions = jsonencode([{
     name         = "api"
     image        = "${aws_ecr_repository.api.repository_url}:${var.api_imagen_tag}"
     portMappings = [{ containerPort = 8000, protocol = "tcp" }]
     environment = [
       { name = "EMH_ENV", value = "aws" },
+      { name = "AWS_REGION", value = var.region },
+      { name = "EMH_JOBS_BUCKET", value = aws_s3_bucket.trabajos.bucket },
       { name = "EMH_BEDROCK_MODEL_ID", value = var.bedrock_model_id },
       { name = "EMH_DB_HOST", value = aws_db_instance.principal.address },
       { name = "EMH_DB_NAME", value = var.db_nombre },
@@ -83,10 +93,17 @@ resource "aws_ecs_task_definition" "sandbox" {
   execution_role_arn       = aws_iam_role.ejecucion.arn
   task_role_arn            = aws_iam_role.tarea_sandbox.arn # vacío (NFR-004)
 
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "ARM64"
+  }
+
   container_definitions = jsonencode([{
-    name    = "sandbox"
-    image   = "${aws_ecr_repository.sandbox.repository_url}:${var.sandbox_imagen_tag}"
-    command = ["sleep", "infinity"] # la API hace exec/RunTask con el comando real por invocación
+    name  = "sandbox"
+    image = "${aws_ecr_repository.sandbox.repository_url}:${var.sandbox_imagen_tag}"
+    # El ENTRYPOINT de la imagen (sandbox/entrypoint.py) baja el trabajo por la
+    # URL prefirmada que la API inyecta en el `RunTask`, ejecuta la secuencia de
+    # comandos y sube el resultado. La API no puede hacer `exec` (rol vacío).
     logConfiguration = {
       logDriver = "awslogs"
       options = {

@@ -1,6 +1,6 @@
 # ADR-006 — Despliegue en AWS con Terraform (cómputo y red)
 
-**Estado:** Aceptado — 2026-09-28. Promueve FR-038 a F1 (decisión D-9 de `00-vision.md`). **Actualización 2026-09-29:** la IaC está implementada y validada con `terraform plan`; no se aplicó (sin `apply`) porque los adaptadores de nube (`FargateSandbox`, `PostgresRunRepository`) no se implementaron; pasan a F2. Se decidió con el autor no gastar crédito en una infraestructura sin aplicación funcional encima.
+**Estado:** Aceptado — 2026-09-28. Promueve FR-038 a F1 (decisión D-9 de `00-vision.md`). **Actualización 2026-09-29:** los adaptadores de nube (`PostgresRunRepository`, `FargateSandbox`, `EMH_ENV=aws`) se implementaron y prueban en `tests/`; ver "Sandbox en Fargate" y "Desviaciones conscientes" abajo. (Una versión anterior de esta actualización los daba por no implementados; se revirtió al decidir con el autor completar el despliegue.)
 
 ## Contexto
 
@@ -35,6 +35,24 @@ Esto se suma, no reemplaza, al diseño local ya aprobado (ADR-004 SQLite, ADR-00
         ▼ (fuera de la VPC, gestionado por AWS)
    Amazon Bedrock — Nova 2 Lite (ADR-002)
 ```
+
+## Sandbox en Fargate: trabajos por S3 con URL prefirmada
+
+El rol de tarea del sandbox está **vacío a propósito** (NFR-004), así que no hay `ecs execute-command` (exige permisos SSM en ese rol) ni acceso a S3 por rol. El intercambio se diseñó como un *trabajo*:
+
+1. `FargateSandbox.ejecutar_secuencia` empaqueta en un `.tar.gz` el workspace (sin `.git` ni enlaces simbólicos), el wheelhouse y `job.json` con la secuencia de comandos, y lo sube a un bucket S3 privado, cifrado, con expiración a 1 día (`infra/s3.tf`).
+2. Firma **dos URLs de un solo objeto** (entrada GET, salida PUT, caducidad 30 min) y lanza la tarea con `ecs:RunTask`, inyectándolas como únicas variables de entorno.
+3. La imagen del sandbox (`Dockerfile.sandbox`, `sandbox/entrypoint.py`, solo biblioteca estándar) descarga el trabajo, **retira las variables `EMH_*` del entorno**, ejecuta la secuencia con la misma semántica que en local (si un paso que no es el último falla, corta) y sube el resultado.
+4. La API espera a `STOPPED`, lee el resultado y borra los objetos (`destruir`). Si la tarea no arranca, excede 15 min o muere sin resultado, lanza `ErrorSandboxNube` y el runner cierra la ejecución como `FALLIDO_CONTROLADO` (RN-11).
+
+El contrato de ambos lados se prueba junto sin AWS (`tests/unit/test_fargate_sandbox.py`: un ECS/S3 en memoria cuyo `run_task` ejecuta el ejecutor real), y el ejecutor rechaza rutas que escapen del workspace (`tests/unit/test_sandbox_entrypoint.py`).
+
+## Desviaciones conscientes frente al diseño local
+
+- **Red del sandbox.** En local el contenedor corre con `network=none`. En una VPC sin NAT ni *endpoints* privados no se puede negar todo internet y a la vez bajar la imagen de ECR y usar las URLs de S3; agregar los *endpoints* de interfaz de ECR costaría más que todo el ejercicio. El grupo de seguridad del sandbox permite **solo salida TCP 443**, sin entrada, con rol IAM vacío, sin secretos en el entorno de los comandos, tarea efímera y `pip --no-index` (el wheelhouse viaja en el trabajo). Un repositorio hostil podría alcanzar hosts HTTPS externos durante sus pruebas, pero no encontraría credenciales ni permisos que usar.
+- **API sin autenticación (RN-14).** La tarea de la API tiene IP pública directa; el grupo de seguridad solo admite los CIDR de `var.cidr_acceso_api` y Terraform rechaza `0.0.0.0/0`.
+- **Repos de demo públicos.** Para no guardar credenciales de GitHub en la cuenta, los dos repositorios de demo (propios, sin datos sensibles) se hicieron públicos; la API los clona sin token.
+- **Memoria de trabajo del agente** (`MemorySaver`) vive en el proceso: si la tarea de la API se reinicia con una ejecución esperando aprobación, esa ejecución no se puede reanudar (el estado de negocio sí persiste en RDS). Suficiente para la demo; el *checkpointer* en Postgres es F2.
 
 ## Alternativas descartadas (con justificación de costo)
 

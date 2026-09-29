@@ -291,15 +291,21 @@ def run_tests(ctx: ContextoHerramientas, args: ArgsRunTests) -> ResultadoHerrami
     try:
         bloques: list[str] = []
         codigo_final = 0
-        for i, comando in enumerate(args.comandos):
-            resultado = ctx.sandbox.ejecutar(contenedor_id, comando, con_red=False)
+        secuencia = getattr(ctx.sandbox, "ejecutar_secuencia", None)
+        if secuencia is not None:
+            resultados = secuencia(contenedor_id, args.comandos, con_red=False)
+        else:  # dobles de prueba que solo implementan `ejecutar`
+            resultados = []
+            for i, comando in enumerate(args.comandos):
+                resultado = ctx.sandbox.ejecutar(contenedor_id, comando, con_red=False)
+                resultados.append(resultado)
+                if resultado.codigo_salida != 0 and i != len(args.comandos) - 1:
+                    # un paso de instalación falló: no tiene sentido seguir con
+                    # el resto de la secuencia (RN-11: se informa, no se cuelga)
+                    break
+        for comando, resultado in zip(args.comandos, resultados):
             bloques.append(f"$ {' '.join(comando)}\n{resultado.salida}")
             codigo_final = resultado.codigo_salida
-            es_ultimo = i == len(args.comandos) - 1
-            if resultado.codigo_salida != 0 and not es_ultimo:
-                # un paso de instalación falló: no tiene sentido seguir con
-                # el resto de la secuencia (RN-11: se informa, no se cuelga)
-                break
     finally:
         ctx.sandbox.destruir(contenedor_id)
 

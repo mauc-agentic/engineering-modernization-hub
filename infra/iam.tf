@@ -50,23 +50,37 @@ data "aws_iam_policy_document" "tarea_api" {
     effect  = "Allow"
     actions = ["bedrock:InvokeModel", "bedrock:Converse"]
     resources = [
-      "arn:aws:bedrock:${var.region}::foundation-model/amazon.nova-2-lite-v1:0",
+      # El perfil de inferencia `us.` enruta entre regiones de EE. UU.: el modelo
+      # base debe estar permitido en todas (el perfil en sí, solo en esta cuenta).
+      "arn:aws:bedrock:*::foundation-model/amazon.nova-2-lite-v1:0",
       "arn:aws:bedrock:*:${data.aws_caller_identity.actual.account_id}:inference-profile/${var.bedrock_model_id}",
     ]
   }
 
   statement {
-    sid     = "LanzarTareaSandbox"
-    effect  = "Allow"
-    actions = ["ecs:RunTask", "ecs:DescribeTasks", "ecs:StopTask"]
-    resources = [
-      "${replace(aws_ecs_task_definition.sandbox.arn, "/:\\d+$/", "")}:*",
-    ]
+    sid       = "LanzarTareaSandbox"
+    effect    = "Allow"
+    actions   = ["ecs:RunTask"]
+    resources = ["${replace(aws_ecs_task_definition.sandbox.arn, "/:\\d+$/", "")}:*"]
     condition {
       test     = "ArnEquals"
       variable = "ecs:cluster"
       values   = [aws_ecs_cluster.principal.arn]
     }
+  }
+
+  statement {
+    sid       = "ObservarYDetenerTareasSandbox"
+    effect    = "Allow"
+    actions   = ["ecs:DescribeTasks", "ecs:StopTask"]
+    resources = ["arn:aws:ecs:${var.region}:${data.aws_caller_identity.actual.account_id}:task/${aws_ecs_cluster.principal.name}/*"]
+  }
+
+  statement {
+    sid       = "IntercambioDeTrabajosDelSandbox"
+    effect    = "Allow"
+    actions   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
+    resources = ["${aws_s3_bucket.trabajos.arn}/jobs/*"]
   }
 
   statement {

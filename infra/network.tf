@@ -51,11 +51,11 @@ resource "aws_security_group" "api" {
   vpc_id      = aws_vpc.principal.id
 
   ingress {
-    description = "API HTTP -- ajustar a un CIDR conocido antes de produccion"
+    description = "API HTTP solo desde los CIDR autorizados (sin autenticacion en F1, RN-14)"
     from_port   = 8000
     to_port     = 8000
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.cidr_acceso_api
   }
 
   egress {
@@ -70,15 +70,24 @@ resource "aws_security_group" "api" {
 
 resource "aws_security_group" "sandbox" {
   name_prefix = "${var.nombre_proyecto}-sandbox-"
-  description = "Tarea efimera de verificacion: SIN entrada; salida solo para pip download (PyPI) -- ADR-005/D-6"
+  description = "Tarea efimera de verificacion: SIN entrada; salida solo HTTPS (ECR + S3 prefirmado)"
   vpc_id      = aws_vpc.principal.id
 
   # Sin bloque ingress -> ninguna regla de entrada (control 2/NFR-005:
   # coherente con que el sandbox NUNCA acepta conexiones).
+  #
+  # Salida: solo TCP 443. La tarea la necesita para bajar su imagen de ECR y
+  # leer/escribir sus dos URLs prefirmadas de S3; el wheelhouse ya viaja
+  # dentro del trabajo, asi que pip nunca sale a internet (--no-index).
+  # DESVIACION CONSCIENTE frente al sandbox local (network=none): en una VPC
+  # sin NAT ni endpoints privados no se puede negar todo internet y a la vez
+  # bajar la imagen; se mitiga con rol IAM vacio, sin secretos en el entorno
+  # (el ejecutor retira EMH_*), tarea efimera y solo 443. Ver ADR-006.
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    description = "HTTPS (ECR, S3)"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 

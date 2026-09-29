@@ -91,3 +91,30 @@ def test_modernizacion_inviable_no_toca_el_repositorio(repo, workspace):
 
     # Trazabilidad: 4 llamadas (interpretar, descubrir, consultar, viabilidad)
     assert len(repo.listar_llamadas_modelo(e.id)) == 4
+
+
+def test_error_inesperado_finaliza_de_forma_controlada_y_no_deja_la_ejecucion_colgada(tmp_path):
+    """RN-11: si algo revienta dentro del grafo (aquí, un modelo sin respuestas
+    programadas que lanza IndexError), la ejecución termina FALLIDO_CONTROLADO."""
+    from emh.agent.graph import Entorno
+    from emh.agent.runner import LangGraphAgentRunner
+    from emh.core.models import EstadoEjecucion, ResultadoEjecucion
+    from emh.models.scripted import ScriptedModel
+    from emh.persistence.sqlite_repo import SqliteRunRepository
+    from emh.policy.gate import PolicyGate
+    from tests.factories import ejecucion, solicitud
+
+    repo = SqliteRunRepository(tmp_path / "t.db")
+    try:
+        s = repo.guardar_solicitud(solicitud())
+        e = repo.guardar_ejecucion(ejecucion(solicitud_id=s.id))
+        entorno = Entorno(
+            repo=repo, modelo=ScriptedModel([]), gate=PolicyGate(frozenset({"git"})), sandbox=None,
+            workspace_root_para=lambda _id: tmp_path,
+        )
+        LangGraphAgentRunner(entorno).run(e.id)  # no debe propagar la excepción
+        final = repo.obtener_ejecucion(e.id)
+        assert final.estado is EstadoEjecucion.FINALIZADA
+        assert final.resultado is ResultadoEjecucion.FALLIDO_CONTROLADO
+    finally:
+        repo.close()

@@ -70,6 +70,19 @@ class DockerSandbox:
             codigo_salida=salida.exit_code, salida=salida.output.decode("utf-8", errors="replace")
         )
 
+    def ejecutar_secuencia(
+        self, identificador: str, comandos: list[list[str]], *, con_red: bool = False
+    ) -> list[ResultadoComando]:
+        """Misma semántica que el adaptador de nube: si un paso que no es el
+        último falla, no se sigue (no tiene sentido verificar sin instalar)."""
+        resultados: list[ResultadoComando] = []
+        for i, comando in enumerate(comandos):
+            r = self.ejecutar(identificador, comando, con_red=con_red)
+            resultados.append(r)
+            if r.codigo_salida != 0 and i != len(comandos) - 1:
+                break
+        return resultados
+
     def destruir(self, identificador: str) -> None:
         try:
             contenedor = self._cliente.containers.get(identificador)

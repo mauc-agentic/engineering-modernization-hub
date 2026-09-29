@@ -1,13 +1,15 @@
-# Imagen base de la tarea efímera de verificación (ADR-005/ADR-006). Solo
-# necesita Python -- pip y pytest se instalan en el venv de /tmp desde el
-# wheelhouse en cada ejecución (06-estrategias.md), nunca se hornean aquí,
-# porque las dependencias dependen de la estrategia y del repositorio
-# objetivo, no de esta imagen. Build:
+# Imagen de la tarea efímera de verificación (ADR-005/ADR-006). Solo necesita
+# Python: pip y pytest se instalan en un venv de /tmp desde el wheelhouse que
+# viaja dentro del trabajo (06-estrategias.md); las dependencias dependen de
+# la estrategia y del repositorio objetivo, no de esta imagen.
 #   docker build -f Dockerfile.sandbox -t emh-sandbox .
+# El sandbox LOCAL (Docker) no usa esta imagen: monta el workspace directamente.
 
 FROM python:3.12-slim
 
-# Nada más: el contenedor arranca con "sleep infinity" (ECS) o se crea
-# efímero (Docker local, ADR-005); el workspace y el wheelhouse se montan
-# en tiempo de ejecución, nunca en la imagen.
-CMD ["sleep", "infinity"]
+RUN mkdir /workspace /wheelhouse && chown 1000:1000 /workspace /wheelhouse
+COPY sandbox/entrypoint.py /entrypoint.py
+
+USER 1000:1000
+WORKDIR /workspace
+ENTRYPOINT ["python", "/entrypoint.py"]

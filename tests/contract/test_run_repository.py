@@ -1,5 +1,6 @@
-"""Prueba de contrato: SqliteRunRepository contra el puerto RunRepository
-(NFR-016 — cambiar de adaptador no debe exigir cambiar el dominio)."""
+"""Prueba de contrato: SqliteRunRepository y PostgresRunRepository contra el
+puerto RunRepository (NFR-016 — cambiar de adaptador no debe exigir cambiar
+el dominio). Postgres corre en un contenedor Docker real; sin Docker se omite."""
 
 from __future__ import annotations
 
@@ -27,9 +28,62 @@ from emh.persistence.sqlite_repo import SqliteRunRepository
 from tests.factories import ejecucion, solicitud
 
 
-@pytest.fixture()
-def repo(tmp_path):
-    r = SqliteRunRepository(tmp_path / "test.db")
+@pytest.fixture(scope="session")
+def postgres_admin_dsn():
+    """Postgres 16 efímero en Docker (o el DSN de EMH_TEST_PG_DSN si existe)."""
+    import os
+    import time
+
+    dsn = os.environ.get("EMH_TEST_PG_DSN")
+    if dsn:
+        yield dsn
+        return
+    try:
+        import docker
+        import psycopg
+
+        cliente = docker.from_env()
+        cliente.ping()
+    except Exception:
+        pytest.skip("Docker/psycopg no disponibles para Postgres")
+    contenedor = cliente.containers.run(
+        "postgres:16", environment={"POSTGRES_PASSWORD": "test"}, ports={"5432/tcp": None},
+        detach=True, remove=True,
+    )
+    try:
+        for _ in range(60):
+            contenedor.reload()
+            puerto = (contenedor.ports.get("5432/tcp") or [{}])[0].get("HostPort")
+            if puerto:
+                try:
+                    psycopg.connect(f"postgresql://postgres:test@localhost:{puerto}/postgres", connect_timeout=2).close()
+                    break
+                except Exception:
+                    pass
+            time.sleep(1)
+        else:
+            pytest.skip("Postgres de prueba no arrancó")
+        yield f"postgresql://postgres:test@localhost:{puerto}/postgres"
+    finally:
+        contenedor.stop(timeout=2)
+
+
+@pytest.fixture(params=["sqlite", "postgres"])
+def repo(request, tmp_path):
+    if request.param == "sqlite":
+        r = SqliteRunRepository(tmp_path / "test.db")
+    else:
+        import uuid
+
+        import psycopg
+
+        from emh.persistence.postgres_repo import PostgresRunRepository
+
+        admin_dsn = request.getfixturevalue("postgres_admin_dsn")
+        nombre = f"t_{uuid.uuid4().hex[:12]}"  # base fresca por prueba: sin hashes UNIQUE cruzados
+        with psycopg.connect(admin_dsn, autocommit=True) as admin:
+            admin.execute(f"CREATE DATABASE {nombre}")
+        r = PostgresRunRepository(admin_dsn.rsplit("/", 1)[0] + "/" + nombre)
     yield r
     r.close()
 
@@ -153,8 +207,10 @@ def test_llamada_modelo_trazabilidad(repo):
 
 def test_claves_foraneas_activas(repo):
     """Una ejecución que referencia una solicitud inexistente debe fallar
-    (PRAGMA foreign_keys=ON, ADR-004)."""
+    (PRAGMA foreign_keys=ON en SQLite, ADR-004; restricción nativa en Postgres)."""
     import sqlite3
 
-    with pytest.raises(sqlite3.IntegrityError):
+    import psycopg
+
+    with pytest.raises((sqlite3.IntegrityError, psycopg.IntegrityError)):
         repo.guardar_ejecucion(ejecucion(solicitud_id=999999))

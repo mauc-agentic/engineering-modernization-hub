@@ -85,6 +85,14 @@ class Sandbox(Protocol):
         self, identificador: str, comando: list[str], *, con_red: bool = False
     ) -> ResultadoComando: ...
 
+    def ejecutar_secuencia(
+        self, identificador: str, comandos: list[list[str]], *, con_red: bool = False
+    ) -> list[ResultadoComando]:
+        """Toda la secuencia (instalación + verificación) en el MISMO
+        contenedor/tarea; se detiene tras un fallo que no sea el último paso.
+        Opcional para dobles de prueba: `run_tests` cae a `ejecutar` si falta."""
+        ...
+
     def destruir(self, identificador: str) -> None: ...
 
 

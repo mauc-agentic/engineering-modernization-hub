@@ -39,7 +39,7 @@ El proyecto tiene dos niveles de pruebas (`DOCS/03-arquitectura.md` §8):
 - **Nivel A** (`ScriptedModel`, **SIMULATED**): determinista, sin red ni Bedrock. Corre en segundos.
 - **Nivel B** (`@pytest.mark.live`): contra Amazon Bedrock real (Nova 2 Lite). Requiere credenciales AWS.
 
-La suite completa son 166 pruebas (más 1 omitida a propósito) e incluye Docker real y Bedrock real.
+La suite completa son 174 pruebas (más 1 omitida a propósito) e incluye Docker real y Bedrock real.
 
 ```bash
 # Todo (nivel A + contratos + Docker real + Bedrock real):
@@ -165,6 +165,15 @@ DOCS/            especificación, ADRs, documento ejecutivo y guion del video
 
 - `ScriptedModel` (`emh/models/scripted.py`): nivel A de pruebas. Nunca se usa en la demo en vivo.
 - La identidad del aprobador en F1 no está autenticada: se acepta el campo `aprobador` declarado por quien llama a la API (ver `DOCS/07-seguridad.md` §2, resuelto en F2 con SSO — `FR-039`).
+
+## Observabilidad (ADR-008)
+
+Cada ejecución deja una **traza**: cada nodo del grafo, llamada al modelo y llamada a herramienta,
+con su duración real, tokens y resultado (`GET /ejecuciones/{id}/traza` y la tarjeta "Traza de
+ejecución" del dashboard). En AWS, además, la API exporta **spans de OpenTelemetry** con el ADOT
+a CloudWatch (AgentCore Observability, vista *GenAI Observability*), con jerarquía
+`ejecucion > nodo > modelo | herramienta`. Nunca se guardan prompts, código ni salidas.
+No se migró a AgentCore Runtime: su capa de observabilidad admite agentes alojados fuera.
 
 ## Despliegue en AWS (Terraform, ADR-006/ADR-007)
 

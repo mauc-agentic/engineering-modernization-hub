@@ -17,14 +17,10 @@ resource "aws_cloudwatch_log_group" "agente" {
   retention_in_days = 14 # higiene de costo
 }
 
-# El endpoint OTLP de CloudWatch exige que los streams existan (en AgentCore Runtime
-# los crea el servicio; para un agente alojado fuera hay que crearlos): sin ellos el
-# exportador responde 400 "The specified log stream does not exist".
-resource "aws_cloudwatch_log_stream" "logs_agente" {
-  name           = "runtime-logs"
-  log_group_name = aws_cloudwatch_log_group.agente.name
-}
-
+# El endpoint OTLP de CloudWatch exige que el stream de SPANS exista (en AgentCore
+# Runtime lo crea el servicio; para un agente alojado fuera hay que crearlo): sin él el
+# exportador responde 400 "The specified log stream does not exist". El stream
+# `runtime-logs` lo crea el propio exportador al conectar (no se gestiona aquí).
 resource "aws_cloudwatch_log_stream" "spans_agente" {
   name           = "spans"
   log_group_name = aws_cloudwatch_log_group.agente.name

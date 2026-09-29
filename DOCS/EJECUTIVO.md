@@ -79,6 +79,8 @@ Nueve de diez elementos de Fase 2 (`10-evolucion-producto.md`) no tocan el núcl
 
 **El despliegue en AWS con Terraform, que el caso marca como plus, está hecho y verificado de extremo a extremo** (decisión D-9, con USD 100 de crédito y disciplina FinOps explícita en cada elección de infraestructura — `ADR-006`, `ADR-007`): 35 recursos creados con `terraform apply` a partir de un plan guardado y revisado — ECS Fargate ARM64 sin balanceador ni NAT (API + una tarea efímera por verificación), RDS Postgres de instancia simple, bucket S3 para el intercambio de trabajos, SSM en vez de Secrets Manager y alertas de presupuesto a 20/50/80 %. Los escenarios 1, 2 y 4 se ejecutaron contra ese despliegue con Bedrock real, RDS y sandbox Fargate (p. ej. el escenario 1: LISTO_PARA_REVISION, 7/7 pruebas ejecutadas en una tarea Fargate, ~USD 0.09). El camino local no desaparece: es el respaldo de la demo con el mismo código y solo cambia `EMH_ENV`. El costo real del ejercicio son unos pocos dólares del crédito; al terminar se ejecuta `terraform destroy`.
 
+**Observabilidad (ADR-008).** Cada ejecución deja una traza de nodos, llamadas al modelo y herramientas con duración real y tokens, visible en el dashboard, y en AWS se exporta como spans de OpenTelemetry a CloudWatch con AgentCore Observability, sin migrar a AgentCore Runtime y sin guardar prompts ni código.
+
 ## 8. Qué queda simulado, dicho explícitamente
 
 - `ScriptedModel`: nivel A de pruebas, determinista, marcado `SIMULATED` en el código. Nunca se usa en la demo en vivo.

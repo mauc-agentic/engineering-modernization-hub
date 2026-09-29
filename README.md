@@ -189,13 +189,20 @@ terraform apply ecr.tfplan
 terraform plan  -out=completo.tfplan
 terraform apply completo.tfplan
 
-# 3) Usar la API desplegada
-export EMH_API=$(../scripts/nube-url.sh)        # la tarea no tiene balanceador: IP pública directa
+# 3) URL pública (dashboard + API) y kit de demo
+terraform output url_web                        # https://xxxx.cloudfront.net  (usuario: wenia)
+terraform output -raw contrasena_web            # autenticación HTTP básica generada por Terraform
+export EMH_API=$(../scripts/nube-url.sh)        # alternativa: IP directa de la tarea (solo tu IP)
 ../scripts/02-enviar.sh 1                       # y el resto del kit de demo, igual que en local
 
 terraform destroy                               # IMPORTANTE al terminar: RDS y Fargate cobran por hora
 ```
 
-La API no tiene autenticación en F1 (RN-14): el grupo de seguridad solo admite
-tu IP y Terraform rechaza `0.0.0.0/0`. Si cambias de red, actualiza
-`cidr_acceso_api` y vuelve a aplicar.
+**URL pública.** CloudFront sirve el dashboard (bucket S3 privado con OAC) y enruta la
+API (`/solicitudes*`, `/ejecuciones*`, `/docs*`) a un ALB y de ahí a Fargate, todo bajo
+un mismo dominio HTTPS (sin CORS ni contenido mixto). La API no tiene autenticación
+propia en F1 (RN-14), así que una función de CloudFront exige autenticación HTTP básica
+en todas las rutas y el ALB solo reenvía lo que trae la cabecera secreta de CloudFront
+(directo responde 403). El acceso directo a la IP de la tarea sigue limitado a tu IP
+(`cidr_acceso_api`; Terraform rechaza `0.0.0.0/0`). El ALB agrega ~USD 0.03/h: otra razón
+para el `terraform destroy` final.

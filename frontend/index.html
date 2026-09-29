@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Engineering Modernization Hub · Wenia</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230B0B6B'/%3E%3Ctext x='32' y='45' font-size='38' font-family='Arial' font-weight='800' text-anchor='middle' fill='white'%3EW%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&display=swap">
 <style>
@@ -80,6 +81,8 @@
   .step.active { background: #fff; color: var(--navy); box-shadow: 0 0 0 4px #ffffff40; }
   .step.active .n { background: var(--navy); color: #fff; }
   .step.stop .n { background: var(--danger); color: #fff; }
+  .step.stop { box-shadow: 0 0 0 4px #B3163C55; }
+  .step.skip { opacity: .5; }
 
   main { display: grid; grid-template-columns: 400px 1fr; gap: 28px; padding: 32px 40px 64px; max-width: 1480px; margin: 0 auto; }
   @media (max-width: 980px) { main { grid-template-columns: 1fr; padding: 20px; } .topbar, .hero { padding-left: 20px; padding-right: 20px; } }
@@ -288,18 +291,28 @@ const PASO_POR_ESTADO = {
   DESCUBRIMIENTO: 1, ANALISIS: 1, PLANEACION: 2, ESPERANDO_APROBACION: 3,
   APLICANDO_CAMBIOS: 4, VERIFICANDO: 4, CORRIGIENDO: 4, FINALIZADA: 5,
 };
-function pintarPasos(estado, resultado) {
+function pintarPasos(estado, resultado, motivo) {
   const actual = estado ? (PASO_POR_ESTADO[estado] ?? 0) : -1;
   const termino = estado === 'FINALIZADA';
-  const fallo = termino && resultado && resultado !== 'LISTO_PARA_REVISION' && resultado !== 'COMPLETADO_PARCIALMENTE';
+  // Si la ejecución se detuvo antes de terminar el flujo, se muestra dónde y qué no ocurrió.
+  const cortaEn = !termino ? null
+    : (motivo === 'INVIABLE' ? 1 : (resultado === 'FALLIDO_CONTROLADO' || resultado === 'PRESUPUESTO_AGOTADO' ? -2 : null));
   $('steps').innerHTML = PASOS.map((p, i) => {
-    let clase = '';
+    let clase = '', marca = String(i + 1);
     if (actual >= 0) {
-      if (termino) clase = (fallo && i === actual) ? 'stop' : 'done';
+      if (termino && cortaEn !== null && cortaEn >= 0) {          // p. ej. inviable: se detiene en el análisis
+        if (i < cortaEn) clase = 'done';
+        else if (i === cortaEn) clase = 'stop';
+        else if (i < 5) clase = 'skip';
+        else clase = 'done';
+      } else if (termino) clase = 'done';
       else if (i < actual) clase = 'done';
       else if (i === actual) clase = 'active';
     }
-    return '<div class="step ' + clase + '"><span class="n">' + (clase === 'done' ? '✓' : (i + 1)) + '</span>' + p + '</div>';
+    if (clase === 'done') marca = '✓';
+    if (clase === 'stop') marca = '!';
+    if (clase === 'skip') marca = '–';
+    return '<div class="step ' + clase + '"><span class="n">' + marca + '</span>' + p + '</div>';
   }).join('');
 }
 pintarPasos(null);
@@ -387,7 +400,7 @@ async function actualizar() {
   if (!ejecucionId) return;
   try {
     const e = await api('/ejecuciones/' + ejecucionId);
-    pintarPasos(e.estado, e.resultado);
+    pintarPasos(e.estado, e.resultado, e.motivo_bloqueo);
     $('v-estado').innerHTML = badge(e.estado, 'info');
     $('v-resultado').innerHTML = resultadoBadge(e.resultado) + (e.motivo_bloqueo ? ' ' + badge(e.motivo_bloqueo, 'bad') : '');
     $('v-iter').textContent = e.iteraciones_usadas;

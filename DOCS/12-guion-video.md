@@ -5,6 +5,10 @@ Costo por corrida completa: ~USD 0.05–0.10.
 
 ## Antes de grabar (fuera de cámara)
 
+**Opción A — URL pública en AWS (recomendada para el video):** abre `https://<dominio>.cloudfront.net` (`terraform output url_web`; usuario `wenia`, contraseña con `terraform output -raw contrasena_web`). Es el dashboard con marca Wenia, ya conectado a la API real en Fargate/RDS: no hay que preparar nada más.
+
+**Opción B — local:**
+
 ```bash
 cd engineering-modernization-hub
 source .venv/bin/activate

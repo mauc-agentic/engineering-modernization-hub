@@ -53,6 +53,9 @@ class EchoUpgradeStrategy:
 
     id = "echo_upgrade_ficticia"
 
+    def evidence_probes(self, request):
+        return []
+
     def supports(self, request):
         from emh.core.ports import Soporte
 
@@ -122,3 +125,14 @@ def test_perfil_python_declara_pytest_como_herramienta_del_sandbox():
     perfil = PythonDependencyUpgradeStrategy().command_profile()
     assert perfil.paquetes_herramienta == ["pytest"]
     assert perfil.instalacion[-1][-1] == "pytest"
+
+
+def test_sondas_de_evidencia_apuntan_a_los_metadatos_oficiales_de_la_version_objetivo():
+    """Regresión: el modelo llegó a afirmar 'Flask 3 es compatible con Python 3.7'
+    sin haber consultado nada. La estrategia obliga a traer requires_python."""
+    from tests.factories import solicitud
+
+    s = PythonDependencyUpgradeStrategy()
+    sondas = s.evidence_probes(solicitud(version_esperada="Flask==3.0.0"))
+    assert [(x.dominio, x.consulta) for x in sondas] == [("pypi.org", "pypi/Flask/3.0.0/json")]
+    assert s.evidence_probes(solicitud(version_esperada="Flask>=3.0")) == []

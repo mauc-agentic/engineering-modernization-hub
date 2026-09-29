@@ -138,6 +138,28 @@ def test_search_docs_dominio_permitido(ctx):
     assert "Loader" in r.contenido
 
 
+def test_search_docs_persiste_la_fuente_consultada_con_su_hash(ctx):
+    """Trazabilidad (AC-08): antes ninguna consulta quedaba registrada y el
+    reporte salía con fuentes vacías."""
+    guardadas = []
+    ctx.fetcher = lambda url: "requires_python: >=3.8"
+    ctx.registrar_fuente = lambda f: guardadas.append(f) or f
+    ctx.tipos_fuente_por_dominio = {"pypi.org": "REGISTRO_PAQUETES"}
+    r = search_docs(ctx, ArgsSearchDocs(consulta="pypi/Flask/3.0.0/json", dominio="pypi.org"))
+    assert r.ok
+    assert len(guardadas) == 1
+    assert guardadas[0].url == "https://pypi.org/pypi/Flask/3.0.0/json"
+    assert guardadas[0].tipo == "REGISTRO_PAQUETES"
+    assert len(guardadas[0].hash_contenido) == 64
+
+
+def test_search_docs_denegada_no_persiste_fuente(ctx):
+    guardadas = []
+    ctx.registrar_fuente = lambda f: guardadas.append(f) or f
+    r = search_docs(ctx, ArgsSearchDocs(consulta="x", dominio="evil.com"))
+    assert not r.ok and guardadas == []
+
+
 def test_search_docs_trunca_fuentes_enormes(ctx):
     ctx.fetcher = lambda url: "x" * 600_000
     r = search_docs(ctx, ArgsSearchDocs(consulta="pallets/flask", dominio="pypi.org"))

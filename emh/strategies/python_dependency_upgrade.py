@@ -16,9 +16,11 @@ from emh.core.ports import (
     PerfilComandos,
     PlantillaAlcance,
     Senal,
+    SondaEvidencia,
     Soporte,
 )
 
+_PIN_RE = re.compile(r"^([A-Za-z0-9_.\-]+)==([A-Za-z0-9_.\-]+)$")
 _VERSION_RE = re.compile(r"^[A-Za-z0-9_.\-]+(==|>=|<=|~=)?[A-Za-z0-9_.\-]*$")
 
 
@@ -42,6 +44,14 @@ class PythonDependencyUpgradeStrategy:
             DominioFuente(dominio="pypi.org", tipo=TipoFuente.REGISTRO_PAQUETES.value),
             DominioFuente(dominio="github.com", tipo=TipoFuente.RELEASE_NOTES.value),
         ]
+
+    def evidence_probes(self, request: Solicitud) -> list[SondaEvidencia]:
+        # Metadatos oficiales de la versión objetivo: incluyen `requires_python`,
+        # decisivo para la viabilidad frente al runtime del repo.
+        m = _PIN_RE.match((request.version_esperada or "").strip())
+        if not m:
+            return []
+        return [SondaEvidencia(dominio="pypi.org", consulta=f"pypi/{m.group(1)}/{m.group(2)}/json")]
 
     def command_profile(self) -> PerfilComandos:
         # El contenedor tiene la raíz de solo lectura (NFR-004): el venv se

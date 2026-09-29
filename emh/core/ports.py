@@ -127,6 +127,16 @@ class PlantillaAlcance:
 
 
 @dataclass
+class SondaEvidencia:
+    """Fuente oficial que el harness DEBE consultar antes del análisis de
+    viabilidad (la estrategia sabe cuál es la evidencia determinante; el
+    modelo decide qué significa, no si se consulta)."""
+
+    dominio: str
+    consulta: str
+
+
+@dataclass
 class PaqueteInstrucciones:
     instrucciones: str
 
@@ -137,6 +147,7 @@ class ModernizationStrategy(Protocol):
     def supports(self, request: Solicitud) -> Soporte: ...
     def discovery_signals(self) -> list[Senal]: ...
     def official_sources(self, request: Solicitud) -> list[DominioFuente]: ...
+    def evidence_probes(self, request: Solicitud) -> list[SondaEvidencia]: ...
     def command_profile(self) -> PerfilComandos: ...
     def scope_template(self, plan_hint: dict[str, Any] | None = None) -> PlantillaAlcance: ...
     def prompt_pack(self) -> PaqueteInstrucciones: ...

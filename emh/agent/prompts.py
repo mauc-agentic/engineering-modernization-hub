@@ -42,7 +42,9 @@ ANALIZAR_IMPACTO_Y_VIABILIDAD = BASE + (
     "editando el manifiesto y los archivos que usan el paquete NO es "
     "inviabilidad: es VIABLE y esos ajustes se declaran en el plan. Cita "
     "evidencia verificada (código leído, fuentes consultadas); no la "
-    "reemplaces por suposiciones. Responde SOLO invocando la herramienta de "
+    "reemplaces por suposiciones. La evidencia oficial recuperada en la "
+    "conversación prevalece sobre tu memoria: nunca afirmes compatibilidad "
+    "de runtime o de versiones que no hayas visto en ella. Responde SOLO invocando la herramienta de "
     "resultado."
 )
 

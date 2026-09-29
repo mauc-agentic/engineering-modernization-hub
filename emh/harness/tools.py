@@ -17,6 +17,7 @@ from emh.core.budget import PresupuestoMeter
 from emh.core.models import (
     DecisionAprobacion,
     EventoSeguridad,
+    Fuente,
     OrigenEvento,
     Plan,
     SeveridadEvento,
@@ -75,6 +76,8 @@ class ContextoHerramientas:
     meter: PresupuestoMeter | None = None
     comandos_permitidos_estrategia: list[list[str]] = field(default_factory=list)
     dominios_fuente_permitidos: list[str] = field(default_factory=list)
+    tipos_fuente_por_dominio: dict[str, str] = field(default_factory=dict)
+    registrar_fuente: Callable[[Fuente], Fuente] | None = None
     sandbox: Sandbox | None = None
     ejecutor_host: EjecutorHost = _ejecutor_host_real
     fetcher: Fetcher = _fetcher_real
@@ -185,6 +188,24 @@ def _dominio_pelado(valor: str) -> str:
     return urlparse(valor).netloc or valor.strip().split("/")[0]
 
 
+def _registrar_fuente(ctx: ContextoHerramientas, dominio: str, url: str, contenido: str) -> None:
+    """Trazabilidad (AC-08): toda consulta exitosa queda persistida con el
+    hash de lo que se leyó, para que el reporte cite las fuentes usadas."""
+    if ctx.registrar_fuente is None:
+        return
+    import hashlib
+
+    tipo = next(
+        (t for d, t in ctx.tipos_fuente_por_dominio.items() if dominio == d or dominio.endswith("." + d)),
+        "DOCUMENTACION_OFICIAL",
+    )
+    ctx.registrar_fuente(Fuente(
+        ejecucion_id=ctx.origen_id, tipo=tipo, url=url[:500],
+        hash_contenido=hashlib.sha256(contenido.encode("utf-8", errors="replace")).hexdigest(),
+        resumen=redactar(contenido[:500]),
+    ))
+
+
 def search_docs(ctx: ContextoHerramientas, args: ArgsSearchDocs) -> ResultadoHerramienta:
     dominio = _dominio_pelado(args.dominio)
     if not any(dominio == dp or dominio.endswith("." + dp) for dp in ctx.dominios_fuente_permitidos):
@@ -200,6 +221,7 @@ def search_docs(ctx: ContextoHerramientas, args: ArgsSearchDocs) -> ResultadoHer
     except Exception as exc:  # errores de red se devuelven como resultado, no excepción (RN-11)
         return ResultadoHerramienta(ok=False, motivo_rechazo=f"no se pudo consultar la fuente: {exc}")
 
+    _registrar_fuente(ctx, dominio, url, contenido)
     if len(contenido) > MAX_CARACTERES_FUENTE:
         contenido = contenido[:MAX_CARACTERES_FUENTE] + f"\n[... truncado: {len(contenido)} caracteres en total]"
     return ResultadoHerramienta(ok=True, contenido=redactar(contenido), no_confiable=True)

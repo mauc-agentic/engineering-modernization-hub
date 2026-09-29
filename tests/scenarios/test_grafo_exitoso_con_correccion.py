@@ -164,6 +164,17 @@ def test_flujo_completo_exito_con_correccion(repo, workspace):
     assert final.resultado is ResultadoEjecucion.LISTO_PARA_REVISION
     assert final.iteraciones_usadas == 1  # un ciclo de corrección (límite era 3)
 
+    # Hallazgo #12: la sonda de la estrategia se consulta siempre, queda
+    # persistida como fuente, se le entrega al modelo y sustenta la decisión.
+    fuentes = repo.listar_fuentes(e.id)
+    assert any(f.url == "https://pypi.org/pypi/PyYAML/6.0.2/json" for f in fuentes)
+    assert any("Evidencia oficial recuperada por el harness" in str(m) for m in modelo.mensajes_recibidos[2])
+    from emh.reporting.renderer import ReportRenderer
+
+    reporte = ReportRenderer(repo).render(e.id)
+    assert reporte["fuentes"]
+    assert all(d["sustentada"] for d in reporte["decisiones_tecnicas"] if d["tipo"] == "VIABILIDAD")
+
     # Regresión hallazgo #9: el costo debe persistirse en la ejecución (antes
     # quedaba en 0 aunque las llamadas sí se registraban).
     llamadas = repo.listar_llamadas_modelo(e.id)

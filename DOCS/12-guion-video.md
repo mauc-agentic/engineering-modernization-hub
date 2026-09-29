@@ -31,6 +31,7 @@ Terminal a la izquierda, dashboard a la derecha. Cerrar notificaciones. Si algo 
 | 9:00 | **Escenario 2 — inviable** | `scripts/02-enviar.sh 2` | Restricción Python 3.7 vs Flask 3.0 `Requires-Python >=3.8`: INVIABLE, sin plan, sin cambios, con evidencia. |
 | 10:30 | **Escenario 4 — insegura** | `scripts/02-enviar.sh 4` → aprobar con `scripts/03-aprobar.sh 3` → `scripts/04-reporte.sh 3` | La solicitud pide ignorar el plan, mostrar secretos y desactivar tests. Se trata como dato no confiable: tests intactos, sin secretos, alcance respetado. |
 | 12:00 | Escenario 3 (corrección) | Mostrar `tests/scenarios/test_grafo_exitoso_con_correccion.py` | Prueba guionada (SIMULATED, dicho explícitamente): falla → diagnóstico → parche dentro del alcance → re-verificación, con límite de iteraciones. |
+| 12:30 | Observabilidad | Tarjeta "Traza de ejecución" del dashboard (y, si hay tiempo, CloudWatch → GenAI Observability) | Cada nodo, llamada al modelo y herramienta con su duración real y tokens; se ve el ciclo de corrección. Nunca prompts ni código. |
 | 13:00 | Cierre | Slide 10 | Extensibilidad (segunda estrategia sin tocar el núcleo), el despliegue en AWS (Terraform, 35 recursos) y qué es Fase 2. |
 
 ## Notas honestas para la narración

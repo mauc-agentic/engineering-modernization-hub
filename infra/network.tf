@@ -59,7 +59,7 @@ resource "aws_security_group" "api" {
   }
 
   ingress {
-    description     = "API HTTP desde el ALB (CloudFront -> ALB -> Fargate)"
+    description     = "API HTTP desde el ALB (CloudFront, ALB y Fargate)"
     from_port       = 8000
     to_port         = 8000
     protocol        = "tcp"

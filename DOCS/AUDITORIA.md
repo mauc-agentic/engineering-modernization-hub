@@ -24,7 +24,7 @@ Alcance: código, pruebas, infraestructura, documentación AIUP, README, scripts
 | 1 | `search_docs` era la única herramienta que no consultaba `PolicyGate` | `PolicyGate.verificar_dominio_fuente`; prueba AST que exige que **toda** herramienta registrada use la compuerta | NFR-002 |
 | 2 | El reporte mostraba el costo como `float` crudo | Redondeo a 4 decimales, con prueba | NFR-010 |
 | 3 | La identidad del aprobador no estaba marcada como simulada en el código | Marca `SIMULATED:` en el esquema; prueba de documentación | NFR-019 |
-| 4 | Documentos con `run_id`, cifras de pruebas distintas (166/172/174) y «36 filas de FR» | Un término (`ejecucion_id`), una cifra (validada por prueba), recuento real (41 FR) | NFR-029 |
+| 4 | Documentos con el sinónimo antiguo de `ejecucion_id`, cifras de pruebas distintas (166/172/174) y «36 filas de FR» | Un término (`ejecucion_id`), una cifra (validada por prueba), recuento real (41 FR) | NFR-029 |
 | 5 | Los 71 requisitos seguían `Open`; sin requisitos para traza, dashboard, observabilidad, URL protegida, repo público ni Python 3.12 | Estados actualizados con evidencia; añadidos FR-041–044, NFR-026–029, C-021–022 | AIUP |
 | 6 | Faltaban casos de prueba, glosario, índice y la decisión del repositorio público | TC-001…TC-004, `GLOSARIO.md`, `DOCS/README.md`, ADR-009 | AIUP |
 | 7 | Casos de uso en `Aprobado` tras implementarse | Pasan a `Done` | AIUP |

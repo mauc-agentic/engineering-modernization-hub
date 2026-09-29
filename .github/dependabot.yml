@@ -12,6 +12,11 @@ updates:
   - package-ecosystem: docker
     directory: "/"
     schedule: { interval: weekly }
+    # Python está fijado a 3.12 a propósito: el wheelhouse se descarga para cp312 y la imagen del
+    # sandbox debe coincidir. Un salto de versión se hace a mano, con el wheelhouse y el sandbox a la vez.
+    ignore:
+      - dependency-name: python
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: terraform
     directory: "/infra"
     schedule: { interval: weekly }

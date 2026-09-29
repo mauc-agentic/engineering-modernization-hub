@@ -308,6 +308,13 @@ let pollHandle = null;
 $('api-base').value = (location.protocol.startsWith('http') && !['localhost', '127.0.0.1'].includes(location.hostname))
   ? location.origin : 'http://localhost:8000';
 
+// La identidad (solicitante y aprobador) se recuerda en ESTE navegador; nunca viaja en el código del repositorio.
+for (const id of ['f-solicitante', 'f-aprobador']) {
+  const el = $(id);
+  try { const v = localStorage.getItem('emh.' + id); if (v) el.value = v; } catch (e) { /* sin almacenamiento: se usa el valor de ejemplo */ }
+  el.addEventListener('change', () => { try { localStorage.setItem('emh.' + id, el.value); } catch (e) { /* idem */ } });
+}
+
 const PASOS = ['Solicitud', 'Descubrir y analizar', 'Plan', 'Aprobación', 'Cambios y pruebas', 'Reporte'];
 const PASO_POR_ESTADO = {
   DESCUBRIMIENTO: 1, ANALISIS: 1, PLANEACION: 2, ESPERANDO_APROBACION: 3,

@@ -79,7 +79,7 @@ Para cada elemento: qué es, por qué no entró en F1, y qué habría que tocar 
 
 **Por qué se promovió de F2 a F1:** el caso lo marca como un plus; el autor decidió tomarlo, con USD 100 de crédito disponibles y disciplina FinOps explícita en cada decisión (`ADR-006`, `ADR-007`). Deja de estar en esta sección porque ya no es diseño sin implementar — ver `03-arquitectura.md` §9. Se conserva esta entrada para no romper la numeración y como registro de que la decisión de alcance cambió después de la primera aprobación.
 
-**Estado real (2026-09-29):** la infraestructura Terraform está entregada y validada con `plan`, pero los adaptadores de nube (`PostgresRunRepository`, `FargateSandbox`) siguen sin implementar y pasan a F2 junto con lo siguiente.
+**Estado (2026-09-29):** implementado y desplegado en AWS con sus adaptadores de nube (`PostgresRunRepository`, `FargateSandbox`); ver `ADR-006`.
 
 **Lo que sigue en F2, sin implementar:** alta disponibilidad (Multi-AZ en RDS, varias réplicas de la tarea de la API detrás de un balanceador), *pipeline* de CI/CD que corra `terraform apply` automáticamente, y entornos separados (`staging`/`producción`) — todo lo que un despliegue de demo de un día no necesita pero un producto interno sí.
 

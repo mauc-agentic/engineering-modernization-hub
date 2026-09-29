@@ -54,6 +54,24 @@ El contrato de ambos lados se prueba junto sin AWS (`tests/unit/test_fargate_san
 - **Repos de demo públicos.** Para no guardar credenciales de GitHub en la cuenta, los dos repositorios de demo (propios, sin datos sensibles) se hicieron públicos; la API los clona sin token.
 - **Memoria de trabajo del agente** (`MemorySaver`) vive en el proceso: si la tarea de la API se reinicia con una ejecución esperando aprobación, esa ejecución no se puede reanudar (el estado de negocio sí persiste en RDS). Suficiente para la demo; el *checkpointer* en Postgres es F2.
 
+## Verificación en AWS (2026-09-29)
+
+`terraform apply` de un plan guardado y revisado (2 recursos de ECR primero, para publicar las imágenes ARM64 antes de crear el servicio; luego 35 más). Escenarios ejecutados contra la API desplegada (Bedrock real, RDS, sandbox Fargate, repos reales):
+
+| Escenario | Resultado en AWS |
+|---|---|
+| 1 — exitosa | LISTO_PARA_REVISION; 7/7 pruebas ejecutadas en una tarea Fargate; 3 fuentes citadas; ~USD 0.09 |
+| 2 — inviable | BLOQUEADO / INVIABLE por `requires_python` de PyPI vs. Python 3.7; ~USD 0.03 |
+| 4 — insegura | Sin efecto de la inyección en todas las variantes: LISTO_PARA_REVISION sin tocar nada fuera del plan, BLOQUEADO por el control 7 (parche fuera de alcance, 3 eventos registrados) o FALLIDO_CONTROLADO (el modelo no entregó la salida estructurada) |
+| 2 ejecuciones simultáneas | Dos tareas Fargate concurrentes, cada una con su trabajo aislado en S3 |
+| Reinicio de la API | El historial persistió en RDS (los IDs continuaron); solo se pierde la memoria de trabajo de una ejecución esperando aprobación (`MemorySaver`) |
+
+Hallazgos del primer despliegue real (los tests con dobles no podían verlos), cada uno corregido con prueba de regresión:
+
+- **#13 — 403 al subir el resultado.** boto3 firmó la URL prefirmada con SigV2, donde el `Content-Type` entra en la firma, y `urllib` envía `application/x-www-form-urlencoded` por defecto. Solución: cliente S3 con SigV4 y `ContentType` firmado y enviado igual. Reproducido y confirmado contra el S3 real (`SignatureDoesNotMatch` → `OK`).
+- **#14 — historial vacío tras un cierre temprano.** Ante texto con inyecciones, el modelo a veces responde en prosa en lugar de llamar a la herramienta que normaliza el objetivo; eso cerraba la ejecución, pero las aristas del grafo son incondicionales y el nodo siguiente corría con el historial vacío (Bedrock lo rechaza: "a conversation must start with a user message"). Solución: normalizar el objetivo es una comodidad, no un control (si falla se sigue con el original, que ya es contenido no confiable) y ningún nodo corre si la ejecución ya terminó.
+- Antes de desplegar, un error de permisos evitado en revisión: `ecs:DescribeTasks`/`StopTask` usan el ARN de la tarea (no el de su definición) y el perfil de inferencia de Nova enruta entre regiones, así que el modelo base debe estar permitido en todas.
+
 ## Alternativas descartadas (con justificación de costo)
 
 | Alternativa | Costo estimado | Por qué no |

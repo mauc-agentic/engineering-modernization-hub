@@ -39,7 +39,7 @@ El proyecto tiene dos niveles de pruebas (`DOCS/03-arquitectura.md` §8):
 - **Nivel A** (`ScriptedModel`, **SIMULATED**): determinista, sin red ni Bedrock. Corre en segundos.
 - **Nivel B** (`@pytest.mark.live`): contra Amazon Bedrock real (Nova 2 Lite). Requiere credenciales AWS.
 
-La suite completa son 133 pruebas (más 1 omitida a propósito) e incluye Docker real y Bedrock real.
+La suite completa son 166 pruebas (más 1 omitida a propósito) e incluye Docker real y Bedrock real.
 
 ```bash
 # Todo (nivel A + contratos + Docker real + Bedrock real):
@@ -145,25 +145,25 @@ emh/
   agent/         grafo LangGraph, nodos, prompts
   strategies/    python_dependency_upgrade (+ registro)
   models/        BedrockModel (Nova 2 Lite) · ScriptedModel (SIMULATED)
-  execution/     DockerSandbox (local) · wheelhouse
-  persistence/   SqliteRunRepository
+  execution/     DockerSandbox (local) · FargateSandbox (nube) · wheelhouse
+  persistence/   SqliteRunRepository · PostgresRunRepository (RDS)
   reporting/     ReportRenderer
   api/           FastAPI
   bootstrap.py   raíz de composición
 tests/
   unit/          núcleo, políticas, harness, agente (con dobles de prueba)
-  contract/      SQLite, Docker real, Bedrock real, API
+  contract/      SQLite y Postgres (Docker), Docker real, Bedrock real, API
   scenarios/     los 4 escenarios obligatorios del caso, de extremo a extremo
 scripts/         kit de demo: preparar, enviar, aprobar, reporte (+ solicitudes/*.json)
 frontend/        dashboard de una sola página
-infra/           Terraform (IaC validada con plan, sin apply; ADR-006/ADR-007)
+infra/           Terraform: despliegue en AWS (ADR-006/ADR-007)
+sandbox/         ejecutor de la tarea Fargate (solo biblioteca estándar)
 DOCS/            especificación, ADRs, documento ejecutivo y guion del video
 ```
 
 ## Lo que está simulado (RN-14, marcado explícitamente)
 
 - `ScriptedModel` (`emh/models/scripted.py`): nivel A de pruebas. Nunca se usa en la demo en vivo.
-- Adaptadores de nube (`PostgresRunRepository`, `FargateSandbox`, `EMH_ENV=aws`): diseñados, **no implementados** (ver más abajo).
 - La identidad del aprobador en F1 no está autenticada: se acepta el campo `aprobador` declarado por quien llama a la API (ver `DOCS/07-seguridad.md` §2, resuelto en F2 con SSO — `FR-039`).
 
 ## Despliegue en AWS (Terraform, ADR-006/ADR-007)

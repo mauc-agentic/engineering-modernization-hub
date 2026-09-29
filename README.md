@@ -39,7 +39,7 @@ El proyecto tiene dos niveles de pruebas (`DOCS/03-arquitectura.md` §8):
 - **Nivel A** (`ScriptedModel`, **SIMULATED**): determinista, sin red ni Bedrock. Corre en segundos.
 - **Nivel B** (`@pytest.mark.live`): contra Amazon Bedrock real (Nova 2 Lite). Requiere credenciales AWS.
 
-La suite completa son 130 pruebas (más 1 omitida a propósito) e incluye Docker real y Bedrock real.
+La suite completa son 133 pruebas (más 1 omitida a propósito) e incluye Docker real y Bedrock real.
 
 ```bash
 # Todo (nivel A + contratos + Docker real + Bedrock real):

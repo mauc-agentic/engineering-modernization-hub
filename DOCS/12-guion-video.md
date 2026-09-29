@@ -20,7 +20,7 @@ Terminal a la izquierda, dashboard a la derecha. Cerrar notificaciones. Si algo 
 |---|---|---|---|
 | 0:00 | Datos de la demo | Mostrar `DOCS/11-demo.md` | Repo `ledger-service`, commit `844f287`, PyYAML 5.3.1 → 6.0.2, por qué se eligió (rompe pruebas al primer intento). |
 | 1:00 | Arquitectura y controles | Slides 3 y 5 | Seis capas, ocho controles deterministas; el modelo propone, el código dispone. |
-| 3:00 | Pruebas y regla de capas | `scripts/01-pruebas.sh` | 130 pruebas (incluye Bedrock y Docker reales) e `import-linter` 3/3. *(~45 s; se puede grabar aparte y cortar.)* |
+| 3:00 | Pruebas y regla de capas | `scripts/01-pruebas.sh` | 133 pruebas (incluye Bedrock y Docker reales) e `import-linter` 3/3. *(~45 s; se puede grabar aparte y cortar.)* |
 | 4:00 | **Escenario 1 — exitosa** | `scripts/02-enviar.sh 1` | Descubre, consulta PyPI/GitHub, veredicto VIABLE con evidencia, plan con rutas y hash. |
 | 6:00 | **Aprobación humana** | En el dashboard: revisar plan → **Aprobar** (o `scripts/03-aprobar.sh 1`) | El grafo estaba pausado; nada se toca sin esta decisión, ligada al hash del plan. |
 | 7:30 | Resultado | `scripts/04-reporte.sh 1` y `scripts/05-cambios-aplicados.sh 1` | LISTO_PARA_REVISION, 7/7 pruebas con salida real capturada, diff real, fuentes citadas, costo. |

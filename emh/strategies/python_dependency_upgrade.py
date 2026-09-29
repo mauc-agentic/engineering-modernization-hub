@@ -52,9 +52,10 @@ class PythonDependencyUpgradeStrategy:
             instalacion=[
                 ["python", "-m", "venv", "/tmp/venv"],
                 ["/tmp/venv/bin/pip", "install", "--no-index",
-                 "--find-links=/wheelhouse", "-r", "requirements.txt"],
+                 "--find-links=/wheelhouse", "-r", "requirements.txt", "pytest"],
             ],
             verificacion=[["/tmp/venv/bin/pytest", "-q", "--tb=short"]],
+            paquetes_herramienta=["pytest"],
         )
 
     def scope_template(self, plan_hint: dict | None = None) -> PlantillaAlcance:

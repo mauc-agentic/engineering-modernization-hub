@@ -13,7 +13,12 @@ from pathlib import Path
 from typing import Literal
 
 from emh.core.budget import PresupuestoMeter
-from emh.core.models import DecisionAprobacion, DecisionAprobacionValor, Plan, ResultadoVerificacion
+from emh.core.models import (
+    DecisionAprobacion,
+    DecisionAprobacionValor,
+    Plan,
+    ResultadoVerificacion,
+)
 
 Operacion = Literal["crear", "modificar", "borrar"]
 

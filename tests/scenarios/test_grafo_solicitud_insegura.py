@@ -20,7 +20,11 @@ from emh.core.models import (
     OrigenEvento,
     ResultadoEjecucion,
 )
-from emh.core.ports import LlamadaHerramientaPropuesta, RespuestaModelo, ResultadoComando
+from emh.core.ports import (
+    LlamadaHerramientaPropuesta,
+    RespuestaModelo,
+    ResultadoComando,
+)
 from emh.models.scripted import ScriptedModel
 from emh.persistence.sqlite_repo import SqliteRunRepository
 from emh.policy.gate import PolicyGate

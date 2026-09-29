@@ -11,13 +11,21 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Literal, TypedDict
+from typing import Any, Literal, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
+from emh.agent import prompts
+from emh.agent.runtime import (
+    ContextoAgente,
+    ErrorSalidaModelo,
+    bucle_exploracion,
+    pedir_estructurado,
+)
 from emh.core.budget import PresupuestoMeter
 from emh.core.errors import PresupuestoAgotado
 from emh.core.models import (
@@ -35,10 +43,14 @@ from emh.core.models import (
 )
 from emh.core.ports import ModelPort, RunRepository, Sandbox
 from emh.core.state_machine import transicionar
-from emh.agent.runtime import ContextoAgente, ErrorSalidaModelo, bucle_exploracion, pedir_estructurado
-from emh.agent import prompts
 from emh.harness.contracts import ArgsApplyPatch, ArgsRunTests, CambioArchivoArgs
-from emh.harness.tools import ContextoHerramientas, EjecutorHost, Fetcher, _ejecutor_host_real, _fetcher_real
+from emh.harness.tools import (
+    ContextoHerramientas,
+    EjecutorHost,
+    Fetcher,
+    _ejecutor_host_real,
+    _fetcher_real,
+)
 from emh.harness.tools import apply_patch as fn_apply_patch
 from emh.harness.tools import run_tests as fn_run_tests
 from emh.policy.gate import PolicyGate
@@ -71,7 +83,7 @@ class Entorno:
     workspace_root_para: Callable[[int], Path]
     ejecutor_host: EjecutorHost = _ejecutor_host_real
     fetcher: Fetcher = _fetcher_real
-    max_turnos_exploracion: int = 6
+    max_turnos_exploracion: int = 10
     usar_wheelhouse: bool = False
     """True con un sandbox real (Docker/Fargate): construye el wheelhouse en
     el host antes de verificar (ADR-005/D-6). False en pruebas con sandbox
@@ -104,13 +116,13 @@ def _construir_contexto(entorno: Entorno, ejecucion_id: int) -> ContextoAgente:
     fuentes_decl = estrategia.official_sources(solicitud)
 
     wheelhouse_dir = None
-    if entorno.usar_wheelhouse:
+    if entorno.usar_wheelhouse and decision is not None:  # solo tras la aprobación: antes no se instala nada
         requirements = workspace / "requirements.txt"
         if requirements.is_file():
             from emh.execution.wheelhouse import construir_wheelhouse
 
             wheelhouse_dir = workspace.parent / f"wheelhouse-{ejecucion_id}"
-            construir_wheelhouse(requirements, wheelhouse_dir)
+            construir_wheelhouse(requirements, wheelhouse_dir, adicionales=perfil.paquetes_herramienta)
 
     herramientas_ctx = ContextoHerramientas(
         workspace_root=workspace,

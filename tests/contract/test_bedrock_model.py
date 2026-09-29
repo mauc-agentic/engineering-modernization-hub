@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import boto3
 import pytest
-from botocore.exceptions import NoCredentialsError
 
 from emh.models.bedrock import BedrockModel
 

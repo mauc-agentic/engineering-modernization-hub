@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from emh.core.ports import ResultadoComando
 from emh.execution.wheelhouse import construir_wheelhouse, plataforma_pip_por_defecto
 
@@ -47,3 +45,18 @@ def test_construir_wheelhouse_apunta_a_la_plataforma_del_contenedor_no_del_host(
 
 def test_plataforma_pip_por_defecto_devuelve_manylinux():
     assert plataforma_pip_por_defecto().startswith("manylinux2014_")
+
+
+def test_wheelhouse_incluye_paquetes_de_herramienta_de_la_estrategia(tmp_path):
+    """Regresión hallazgo #11: pytest no está en el requirements.txt del repo;
+    sin descargarlo, la primera verificación fallaba con código 127."""
+    llamadas = []
+
+    def ejecutor_falso(comando):
+        llamadas.append(comando)
+        return ResultadoComando(codigo_salida=0, salida="ok")
+
+    req = tmp_path / "requirements.txt"
+    req.write_text("PyYAML==6.0.2\n")
+    construir_wheelhouse(req, tmp_path / "wh", ejecutor=ejecutor_falso, adicionales=["pytest"])
+    assert llamadas[0][-1] == "pytest"

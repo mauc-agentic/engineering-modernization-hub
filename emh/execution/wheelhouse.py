@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import platform
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from emh.core.ports import ResultadoComando
 
@@ -38,6 +38,7 @@ def construir_wheelhouse(
     ejecutor: EjecutorPip = _ejecutor_real,
     plataforma: str | None = None,
     version_python: str = "312",
+    adicionales: list[str] | None = None,
 ) -> ResultadoComando:
     """Descarga las ruedas binarias de `requirements_path` a `destino`,
     para la plataforma del CONTENEDOR (Linux), no la del host que orquesta.
@@ -54,5 +55,6 @@ def construir_wheelhouse(
         "--platform", plataforma, "--python-version", version_python,
         "--implementation", "cp", "--abi", f"cp{version_python}",
         "-d", str(destino), "-r", str(requirements_path),
+        *(adicionales or []),
     ]
     return ejecutor(comando)

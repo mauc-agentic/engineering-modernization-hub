@@ -14,9 +14,12 @@ BASE = (
 DESCUBRIR_REPO = BASE + (
     "\n\nFase: descubrimiento. Explora el repositorio clonado con list_files "
     "y read_file para entender su estructura y el punto de partida de la "
-    "modernización solicitada. Cuando tengas suficiente contexto, llama a "
-    "'listo' con un resumen de lo encontrado (manifiestos, usos del paquete "
-    "objetivo, pruebas existentes)."
+    "modernización solicitada. Lee TODOS los archivos de código fuente que "
+    "no sean pruebas (no solo el primero que parezca relevante): un uso del "
+    "paquete objetivo que se te escape quedará fuera del plan y no podrá "
+    "corregirse después. Cuando tengas suficiente contexto, llama a "
+    "'listo' con un resumen de lo encontrado (manifiestos, CADA archivo que "
+    "usa el paquete objetivo con su ruta, pruebas existentes)."
 )
 
 CONSULTAR_FUENTES = BASE + (
@@ -31,8 +34,16 @@ ANALIZAR_IMPACTO_Y_VIABILIDAD = BASE + (
     "\n\nFase: análisis de impacto y viabilidad. Con el descubrimiento y las "
     "fuentes ya reunidos en la conversación, decide si la modernización "
     "solicitada es viable. Relaciona cada breaking change documentado con "
-    "los usos concretos que encontraste en el código. Responde SOLO "
-    "invocando la herramienta de resultado."
+    "los usos concretos que encontraste en el código. CRITERIO: es INVIABLE "
+    "únicamente cuando existe un bloqueo que ningún cambio dentro del alcance "
+    "de la estrategia puede resolver (p. ej. la versión objetivo exige un "
+    "runtime o una dependencia incompatible con una restricción explícita de "
+    "la solicitud, o la versión no existe). Un breaking change que se resuelve "
+    "editando el manifiesto y los archivos que usan el paquete NO es "
+    "inviabilidad: es VIABLE y esos ajustes se declaran en el plan. Cita "
+    "evidencia verificada (código leído, fuentes consultadas); no la "
+    "reemplaces por suposiciones. Responde SOLO invocando la herramienta de "
+    "resultado."
 )
 
 PROPONER_PLAN = BASE + (

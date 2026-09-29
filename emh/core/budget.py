@@ -7,9 +7,9 @@ sin dormir de verdad.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Callable
 
 from emh.core.errors import PresupuestoAgotado
 from emh.core.models import Solicitud, utcnow

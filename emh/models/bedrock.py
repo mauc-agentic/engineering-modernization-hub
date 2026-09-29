@@ -8,7 +8,12 @@ from typing import Any
 
 import boto3
 
-from emh.core.ports import LlamadaHerramientaPropuesta, ModelPort, NivelEsfuerzo, RespuestaModelo  # noqa: F401
+from emh.core.ports import (  # noqa: F401
+    LlamadaHerramientaPropuesta,
+    ModelPort,
+    NivelEsfuerzo,
+    RespuestaModelo,
+)
 
 MODEL_ID_DEFECTO = "us.amazon.nova-2-lite-v1:0"
 REGION_DEFECTO = "us-east-1"

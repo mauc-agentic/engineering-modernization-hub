@@ -114,6 +114,10 @@ class DominioFuente:
 class PerfilComandos:
     instalacion: list[list[str]] = field(default_factory=list)
     verificacion: list[list[str]] = field(default_factory=list)
+    paquetes_herramienta: list[str] = field(default_factory=list)
+    """Herramientas de verificación que la estrategia necesita en el sandbox
+    aunque el repo no las declare (p. ej. el ejecutor de pruebas): el host las
+    descarga al wheelhouse y así el manifiesto del cliente no se contamina."""
 
 
 @dataclass

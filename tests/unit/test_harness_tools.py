@@ -12,7 +12,6 @@ from emh.core.models import (
     DecisionAprobacion,
     DecisionAprobacionValor,
     EstadoPlan,
-    EventoSeguridad,
     Plan,
 )
 from emh.core.ports import ResultadoComando
@@ -25,7 +24,15 @@ from emh.harness.contracts import (
     ArgsSearchDocs,
     CambioArchivoArgs,
 )
-from emh.harness.tools import ContextoHerramientas, apply_patch, clone_repo, list_files, read_file, run_tests, search_docs
+from emh.harness.tools import (
+    ContextoHerramientas,
+    apply_patch,
+    clone_repo,
+    list_files,
+    read_file,
+    run_tests,
+    search_docs,
+)
 from emh.policy.gate import PolicyGate
 
 EJECUTABLES = frozenset({"pip", "pytest", "python", "git"})
@@ -129,6 +136,21 @@ def test_search_docs_dominio_permitido(ctx):
     r = search_docs(ctx, ArgsSearchDocs(consulta="project/PyYAML", dominio="pypi.org"))
     assert r.ok
     assert "Loader" in r.contenido
+
+
+def test_search_docs_trunca_fuentes_enormes(ctx):
+    ctx.fetcher = lambda url: "x" * 600_000
+    r = search_docs(ctx, ArgsSearchDocs(consulta="pallets/flask", dominio="pypi.org"))
+    assert r.ok
+    assert len(r.contenido) < 21_000
+    assert "truncado" in r.contenido
+
+
+def test_search_docs_acepta_dominio_con_path_pero_valida_solo_el_host(ctx):
+    ctx.fetcher = lambda url: "ok"
+    assert search_docs(ctx, ArgsSearchDocs(consulta="x", dominio="pypi.org/project/PyYAML")).ok
+    r = search_docs(ctx, ArgsSearchDocs(consulta="x", dominio="evil.com/pypi.org"))
+    assert not r.ok
 
 
 def test_search_docs_acepta_dominio_con_esquema(ctx):

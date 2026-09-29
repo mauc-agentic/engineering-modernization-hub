@@ -114,3 +114,11 @@ def test_import_linter_pasa_con_la_estrategia_registrada(tmp_path):
         ["lint-imports"], cwd=proyecto, capture_output=True, text=True
     )
     assert resultado.returncode == 0, resultado.stdout + resultado.stderr
+
+
+def test_perfil_python_declara_pytest_como_herramienta_del_sandbox():
+    from emh.strategies.python_dependency_upgrade import PythonDependencyUpgradeStrategy
+
+    perfil = PythonDependencyUpgradeStrategy().command_profile()
+    assert perfil.paquetes_herramienta == ["pytest"]
+    assert perfil.instalacion[-1][-1] == "pytest"

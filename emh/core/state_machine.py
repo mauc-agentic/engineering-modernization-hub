@@ -7,15 +7,17 @@ que pide una transición ilegal termina la ejecución en FALLIDO_CONTROLADO
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from emh.core.errors import TransicionIlegal
 from emh.core.models import (
     Ejecucion,
-    EstadoEjecucion as E,
     MotivoBloqueo,
     ResultadoEjecucion,
     utcnow,
+)
+from emh.core.models import (
+    EstadoEjecucion as E,
 )
 
 # Aristas legales del grafo de negocio (03-arquitectura.md §4), colapsadas a
@@ -41,7 +43,7 @@ def transicionar(
     *,
     resultado: ResultadoEjecucion | None = None,
     motivo_bloqueo: MotivoBloqueo | None = None,
-    ahora: Callable[[], "object"] = utcnow,
+    ahora: Callable[[], object] = utcnow,
 ) -> Ejecucion:
     """Devuelve una nueva `Ejecucion` con la transición aplicada.
 

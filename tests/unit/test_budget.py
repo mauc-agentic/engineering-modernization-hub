@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -25,14 +25,14 @@ class RelojFalso:
 
 
 def test_no_lanza_dentro_del_limite():
-    reloj = RelojFalso(datetime(2026, 1, 1, tzinfo=timezone.utc))
+    reloj = RelojFalso(datetime(2026, 1, 1, tzinfo=UTC))
     meter = PresupuestoMeter(solicitud(limite_tiempo_segundos=60), ahora=reloj)
     reloj.avanzar(30)
     meter.verificar()  # no debe lanzar
 
 
 def test_corta_exactamente_al_superar_el_tiempo():
-    reloj = RelojFalso(datetime(2026, 1, 1, tzinfo=timezone.utc))
+    reloj = RelojFalso(datetime(2026, 1, 1, tzinfo=UTC))
     meter = PresupuestoMeter(solicitud(limite_tiempo_segundos=60), ahora=reloj)
     reloj.avanzar(61)
     with pytest.raises(PresupuestoAgotado) as exc:

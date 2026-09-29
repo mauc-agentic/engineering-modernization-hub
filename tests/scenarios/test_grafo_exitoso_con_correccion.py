@@ -10,8 +10,17 @@ import pytest
 
 from emh.agent.graph import Entorno
 from emh.agent.runner import LangGraphAgentRunner
-from emh.core.models import DecisionAprobacion, DecisionAprobacionValor, EstadoEjecucion, ResultadoEjecucion
-from emh.core.ports import LlamadaHerramientaPropuesta, ResultadoComando, RespuestaModelo
+from emh.core.models import (
+    DecisionAprobacion,
+    DecisionAprobacionValor,
+    EstadoEjecucion,
+    ResultadoEjecucion,
+)
+from emh.core.ports import (
+    LlamadaHerramientaPropuesta,
+    RespuestaModelo,
+    ResultadoComando,
+)
 from emh.models.scripted import ScriptedModel
 from emh.persistence.sqlite_repo import SqliteRunRepository
 from emh.policy.gate import PolicyGate
@@ -38,7 +47,7 @@ class SandboxSecuencial:
         # los pasos de instalación (venv, pip) se simulan como exitosos --
         # no son lo que este test está verificando (eso lo cubre
         # test_run_tests_ejecuta_instalacion_y_verificacion_en_un_solo_contenedor).
-        if any("pytest" in parte for parte in comando):
+        if comando[0].endswith("pytest"):
             r = self._resultados[self._indice]
             self._indice += 1
             return r
@@ -154,6 +163,12 @@ def test_flujo_completo_exito_con_correccion(repo, workspace):
     assert final.estado is EstadoEjecucion.FINALIZADA
     assert final.resultado is ResultadoEjecucion.LISTO_PARA_REVISION
     assert final.iteraciones_usadas == 1  # un ciclo de corrección (límite era 3)
+
+    # Regresión hallazgo #9: el costo debe persistirse en la ejecución (antes
+    # quedaba en 0 aunque las llamadas sí se registraban).
+    llamadas = repo.listar_llamadas_modelo(e.id)
+    assert final.tokens_consumidos == sum(l.tokens_entrada + l.tokens_salida for l in llamadas) > 0
+    assert final.costo_estimado_usd > 0
 
     verificaciones = repo.listar_verificaciones(e.id)
     assert len(verificaciones) == 2

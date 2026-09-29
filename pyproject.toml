@@ -12,6 +12,7 @@ dependencies = [
     "boto3>=1.35",
     "PyYAML>=6.0",
     "docker>=7.1",
+    "certifi>=2024.8",
     "pip>=24",  # necesario en el host para `pip download` del wheelhouse (ADR-005/D-6);
                 # los venvs de `uv` no lo traen por defecto
 ]

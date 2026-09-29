@@ -44,6 +44,7 @@ class Aplicacion:
         self.entorno = Entorno(
             repo=self.repo, modelo=self.modelo, gate=self.gate, sandbox=self.sandbox,
             workspace_root_para=self._workspace_root_para,
+            usar_wheelhouse=True,  # sandbox Docker real: instalar sin red (ADR-005/D-6)
         )
         self.runner = LangGraphAgentRunner(self.entorno, checkpointer=MemorySaver())
         self.reporte = ReportRenderer(self.repo, modelo=self.modelo)

@@ -6,7 +6,9 @@ from __future__ import annotations
 import pytest
 
 from emh.core.errors import TransicionIlegal
-from emh.core.models import EstadoEjecucion as E, MotivoBloqueo, ResultadoEjecucion as R
+from emh.core.models import EstadoEjecucion as E
+from emh.core.models import MotivoBloqueo
+from emh.core.models import ResultadoEjecucion as R
 from emh.core.state_machine import transicionar
 from tests.factories import ejecucion
 

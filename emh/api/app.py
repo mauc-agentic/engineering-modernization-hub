@@ -7,7 +7,12 @@ from __future__ import annotations
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from emh.api.schemas import AprobacionEntrada, ErrorRespuesta, SolicitudEntrada, SolicitudRespuesta
+from emh.api.schemas import (
+    AprobacionEntrada,
+    ErrorRespuesta,
+    SolicitudEntrada,
+    SolicitudRespuesta,
+)
 from emh.bootstrap import Aplicacion
 from emh.core.models import DecisionAprobacion, Ejecucion, Solicitud
 from emh.strategies.registry import obtener_estrategia

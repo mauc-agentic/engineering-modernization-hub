@@ -7,14 +7,20 @@ como contenido no confiable (RN-09) antes de devolverla al agente.
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
 from emh.core.budget import PresupuestoMeter
-from emh.core.models import DecisionAprobacion, EventoSeguridad, OrigenEvento, Plan, SeveridadEvento
+from emh.core.models import (
+    DecisionAprobacion,
+    EventoSeguridad,
+    OrigenEvento,
+    Plan,
+    SeveridadEvento,
+)
 from emh.core.ports import ResultadoComando, Sandbox
 from emh.harness.contracts import (
     ArgsApplyPatch,
@@ -43,8 +49,19 @@ def _ejecutor_host_real(comando: list[str], cwd: Path) -> ResultadoComando:
 Fetcher = Callable[[str], str]
 
 
+MAX_CARACTERES_FUENTE = 20_000  # una fuente entera (p. ej. un CHANGES.rst de 600 KB) agotaría el contexto
+
+
 def _fetcher_real(url: str) -> str:
-    with urlopen(url, timeout=15) as resp:  # noqa: S310 -- URL viene de un dominio ya en la allowlist
+    # Bundle de certifi: el Python de python.org en macOS no trae CAs y toda
+    # consulta a fuentes oficiales fallaba con CERTIFICATE_VERIFY_FAILED
+    # (hallazgo en vivo #10). La verificación TLS sigue activa.
+    import ssl
+
+    import certifi
+
+    contexto = ssl.create_default_context(cafile=certifi.where())
+    with urlopen(url, timeout=15, context=contexto) as resp:
         return resp.read().decode("utf-8", errors="replace")
 
 
@@ -163,7 +180,9 @@ def _dominio_pelado(valor: str) -> str:
     'pyyaml.org'. Se acepta cualquiera de las dos formas; el chequeo de
     permiso sigue siendo exacto contra el dominio ya pelado (no se afloja
     la allowlist, solo se interpreta correctamente el argumento)."""
-    return urlparse(valor).netloc or valor.strip().rstrip("/")
+    # Sin esquema ("github.com/pyyaml") el host es el primer segmento; el
+    # permiso sigue siendo exacto contra el host, nunca contra el path.
+    return urlparse(valor).netloc or valor.strip().split("/")[0]
 
 
 def search_docs(ctx: ContextoHerramientas, args: ArgsSearchDocs) -> ResultadoHerramienta:
@@ -181,6 +200,8 @@ def search_docs(ctx: ContextoHerramientas, args: ArgsSearchDocs) -> ResultadoHer
     except Exception as exc:  # errores de red se devuelven como resultado, no excepción (RN-11)
         return ResultadoHerramienta(ok=False, motivo_rechazo=f"no se pudo consultar la fuente: {exc}")
 
+    if len(contenido) > MAX_CARACTERES_FUENTE:
+        contenido = contenido[:MAX_CARACTERES_FUENTE] + f"\n[... truncado: {len(contenido)} caracteres en total]"
     return ResultadoHerramienta(ok=True, contenido=redactar(contenido), no_confiable=True)
 
 

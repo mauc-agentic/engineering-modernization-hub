@@ -7,7 +7,10 @@ independientemente de qué proponga el modelo.
 
 from __future__ import annotations
 
-from emh.core.ports import ModelPort, RespuestaModelo  # noqa: F401 -- documenta el contrato
+from emh.core.ports import (  # noqa: F401 -- documenta el contrato
+    ModelPort,
+    RespuestaModelo,
+)
 
 
 class ScriptedModel:

@@ -11,9 +11,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from emh.core.budget import PresupuestoMeter
 from emh.core.models import LlamadaModelo
 from emh.core.ports import ModelPort, ModernizationStrategy, RunRepository
-from emh.core.budget import PresupuestoMeter
 from emh.harness.tools import ContextoHerramientas
 from emh.policy.gate import PolicyGate
 
@@ -35,7 +35,7 @@ class ContextoAgente:
     gate: PolicyGate
     herramientas_ctx: ContextoHerramientas
     estrategia: ModernizationStrategy
-    max_turnos_exploracion: int = 6
+    max_turnos_exploracion: int = 10
 
 
 def envolver_no_confiable(fuente: str, contenido: str) -> str:
@@ -69,6 +69,14 @@ def llamar_modelo(
             duracion_ms=0,
         )
     )
+    # El costo acumulado se persiste en la ejecución para que la API y el
+    # reporte lo muestren (RN de presupuesto); el medidor solo vive en memoria.
+    e = ctx.meter.estado
+    ejecucion = ctx.repo.obtener_ejecucion(ctx.ejecucion_id)
+    ctx.repo.actualizar_ejecucion(ejecucion.model_copy(update={
+        "tokens_consumidos": e.tokens_entrada + e.tokens_salida,
+        "costo_estimado_usd": e.costo_estimado_usd,
+    }))
     return respuesta
 
 
@@ -191,7 +199,9 @@ def bucle_exploracion(
     que el modelo llama a `listo` o se agota `max_turnos_exploracion`
     (control 4, indirectamente: cada turno pasa por `llamar_modelo`)."""
     from emh.harness.contracts import ArgsListFiles, ArgsReadFile, ArgsSearchDocs
-    from emh.harness.tools import list_files as fn_list_files, read_file as fn_read_file, search_docs as fn_search_docs
+    from emh.harness.tools import list_files as fn_list_files
+    from emh.harness.tools import read_file as fn_read_file
+    from emh.harness.tools import search_docs as fn_search_docs
 
     especs = _tool_specs_harness(herramientas_permitidas)
     registradas = frozenset(herramientas_permitidas) | {HERRAMIENTA_TERMINAR}

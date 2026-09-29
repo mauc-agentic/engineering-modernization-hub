@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any, Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -26,12 +28,100 @@ class SolicitudRespuesta(BaseModel):
 class AprobacionEntrada(BaseModel):
     plan_id: int
     plan_hash: str = Field(max_length=64)
-    decision: str = Field(examples=["APROBADO", "RECHAZADO"])
+    decision: Literal["APROBADO", "RECHAZADO"]
     aprobador: str = Field(examples=["dev:ana@example.com"], max_length=255)
     comentario: str | None = Field(default=None, max_length=2000)
 
 
 class ErrorRespuesta(BaseModel):
-    codigo: str
+    """Formato ÚNICO de error de toda la API (NFR-021): siempre viaja dentro de `detail`."""
+
+    codigo: str = Field(examples=["NO_ENCONTRADO"])
     mensaje: str
-    run_id: int | None = None
+    ejecucion_id: int | None = None
+    campos: list[str] | None = Field(default=None, description="Campos inválidos, solo en errores de validación.")
+
+
+class ErrorHTTP(BaseModel):
+    detail: ErrorRespuesta
+
+
+class EjecucionRespuesta(BaseModel):
+    ejecucion_id: int
+    estado: str = Field(examples=["ESPERANDO_APROBACION"])
+    resultado: str | None = Field(default=None, examples=["LISTO_PARA_REVISION"])
+    motivo_bloqueo: str | None = None
+    iteraciones_usadas: int
+    costo_estimado_usd: float
+
+
+class AnalisisViabilidadRespuesta(BaseModel):
+    veredicto: str = Field(examples=["VIABLE"])
+    impacto_detectado: str
+    evidencia: str
+
+
+class PlanRespuesta(BaseModel):
+    plan_id: int
+    hash: str
+    estado: str = Field(examples=["PROPUESTO"])
+    pasos: list[str]
+    rutas_declaradas: list[str]
+    comandos_verificacion: list[list[str]]
+    riesgos: str | None = None
+
+
+class AprobacionRespuesta(BaseModel):
+    ejecucion_id: int
+    decision_registrada: str
+
+
+class VerificacionRespuesta(BaseModel):
+    comando: str
+    codigo_salida: int
+    resultado: str = Field(examples=["EXITOSA"])
+    pruebas_totales: int
+    pruebas_exitosas: int
+    salida_capturada: str
+    ejecutado_en: str
+
+
+class EventoSeguridadRespuesta(BaseModel):
+    regla: str
+    accion_intentada: str
+    origen: str = Field(examples=["MODELO"])
+    severidad: str = Field(examples=["CRITICA"])
+    registrado_en: str
+
+
+class TramoRespuesta(BaseModel):
+    tipo: Literal["nodo", "modelo", "herramienta"]
+    nombre: str
+    ok: bool
+    duracion_ms: int
+    desplazamiento_ms: int
+    tokens_entrada: int
+    tokens_salida: int
+    detalle: str | None = None
+
+
+class ResumenTrazaRespuesta(BaseModel):
+    duracion_total_ms: int
+    llamadas_modelo: int
+    llamadas_herramienta: int
+    tokens_entrada: int
+    tokens_salida: int
+    errores: int
+
+
+class TrazaRespuesta(BaseModel):
+    tramos: list[TramoRespuesta]
+    resumen: ResumenTrazaRespuesta
+
+
+class ReporteRespuesta(BaseModel):
+    """Reporte en dos partes (hechos + narrativa); la forma exacta la fija `ReportRenderer`."""
+
+    model_config = {"extra": "allow"}
+
+    ejecucion: dict[str, Any]

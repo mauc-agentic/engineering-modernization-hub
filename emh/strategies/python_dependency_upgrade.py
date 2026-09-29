@@ -21,7 +21,9 @@ from emh.core.ports import (
 )
 
 _PIN_RE = re.compile(r"^([A-Za-z0-9_.\-]+)==([A-Za-z0-9_.\-]+)$")
-_VERSION_RE = re.compile(r"^[A-Za-z0-9_.\-]+(==|>=|<=|~=)?[A-Za-z0-9_.\-]*$")
+# Paquete + versión fija ("PyYAML==6.0.2") o un rango PEP 440 ("Flask>=3.0,<3.1").
+_ESPECIFICADOR = r"(==|>=|<=|~=|!=|<|>)\s*[A-Za-z0-9_.*\-]+"
+_VERSION_RE = re.compile(rf"^[A-Za-z0-9_.\-]+(\s*{_ESPECIFICADOR}(\s*,\s*{_ESPECIFICADOR})*)?$")
 
 
 class PythonDependencyUpgradeStrategy:
@@ -72,7 +74,9 @@ class PythonDependencyUpgradeStrategy:
         rutas = ["requirements.txt"]
         if plan_hint and "modulos_afectados" in plan_hint:
             rutas.extend(plan_hint["modulos_afectados"])
-        return PlantillaAlcance(rutas=rutas, operaciones=["modificar"])
+        # "crear" solo alcanza a rutas que el plan DECLARE y el humano apruebe (RN-05): permite añadir
+        # una prueba nueva (FR-014); borrar sigue prohibido y el control 7 impide vaciar o des-activar pruebas.
+        return PlantillaAlcance(rutas=rutas, operaciones=["modificar", "crear"])
 
     def prompt_pack(self) -> PaqueteInstrucciones:
         return PaqueteInstrucciones(

@@ -359,3 +359,20 @@ def test_escenario4_desactiva_tests_y_marca_exitoso(gate):
         codigo_salida=1, pruebas_totales=2, pruebas_exitosas=1, linea_base_pruebas=2
     )
     assert veredicto is ResultadoVerificacion.FALLIDA
+
+
+def test_control7_permite_crear_una_prueba_nueva_solo_si_el_plan_la_declara(gate, workspace):
+    """FR-014: añadir una prueba nueva es legítimo cuando el plan aprobado la declara."""
+    nueva = CambioArchivo(ruta="tests/test_nueva.py", operacion="crear", contenido_original=None,
+                          contenido_nuevo="def test_ok():\n    assert True\n")
+    kw = dict(workspace_root=workspace, operaciones_permitidas=["modificar", "crear"])
+    assert gate.validar_alcance_parche([nueva], rutas_declaradas=["tests/test_nueva.py"], **kw).permitido
+    fuera = gate.validar_alcance_parche([nueva], rutas_declaradas=["requirements.txt"], **kw)
+    assert not fuera.permitido and any("no declarada" in v for v in fuera.detalles)
+
+
+def test_control7_sigue_prohibiendo_borrar_pruebas_aunque_se_permita_crear(gate, workspace):
+    borrar = CambioArchivo(ruta="tests/test_config.py", operacion="borrar", contenido_original="x", contenido_nuevo=None)
+    d = gate.validar_alcance_parche([borrar], workspace_root=workspace, rutas_declaradas=["tests/test_config.py"],
+                                    operaciones_permitidas=["modificar", "crear"])
+    assert not d.permitido

@@ -58,7 +58,10 @@ PROPONER_PLAN = BASE + (
     "versiones). Una vez aprobado el plan, NINGÚN cambio fuera de esas "
     "rutas podrá aplicarse, ni siquiera si lo detectas necesario más tarde "
     "corrigiendo una prueba fallida -- declara ahora todo lo que podrías "
-    "necesitar tocar. Responde SOLO invocando la herramienta de resultado."
+    "necesitar tocar. PRUEBAS: si el cambio exige adaptar pruebas existentes o "
+    "conviene añadir una prueba nueva que lo cubra, declara también sus rutas "
+    "(nunca reduzcas el número de pruebas ni las desactives). Responde SOLO "
+    "invocando la herramienta de resultado."
 )
 
 GENERAR_CAMBIOS = BASE + (

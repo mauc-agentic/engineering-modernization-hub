@@ -210,6 +210,19 @@ def _finalizar(entorno: Entorno, ejecucion_id: int, resultado: ResultadoEjecucio
     _avanzar(entorno, ejecucion_id, EstadoEjecucion.FINALIZADA, resultado=resultado, motivo_bloqueo=motivo)
 
 
+def _con_estrategia(base: str, estrategia, *, senales: bool = False, instrucciones: bool = False) -> str:
+    """La estrategia DECLARA y el agente USA lo declarado (06-estrategias.md): las señales de
+    descubrimiento y las instrucciones específicas viajan en el prompt de sistema. Sin esto,
+    `discovery_signals()` y `prompt_pack()` serían métodos decorativos."""
+    partes = [base]
+    if senales:
+        patrones = ", ".join(s.patron for s in estrategia.discovery_signals())
+        partes.append(f"Señales que esta estrategia pide buscar en el repositorio (archivos o patrones): {patrones}.")
+    if instrucciones:
+        partes.append("Instrucciones específicas de la estrategia activa: " + estrategia.prompt_pack().instrucciones)
+    return "\n\n".join(partes)
+
+
 def _ya_finalizada(entorno: Entorno, ejecucion_id: int) -> bool:
     """Las aristas del grafo son incondicionales: si un nodo anterior ya cerró
     la ejecución (presupuesto agotado, clonado fallido...), los siguientes no
@@ -290,7 +303,7 @@ def construir_grafo(entorno: Entorno):
 
         try:
             historial, resumen, archivos = bucle_exploracion(
-                ctx, "descubrir_repo", sistema=prompts.DESCUBRIR_REPO,
+                ctx, "descubrir_repo", sistema=_con_estrategia(prompts.DESCUBRIR_REPO, ctx.estrategia, senales=True),
                 mensajes=estado["mensajes"], herramientas_permitidas=["list_files", "read_file"],
             )
         except PresupuestoAgotado:
@@ -328,7 +341,7 @@ def construir_grafo(entorno: Entorno):
         ctx = _construir_contexto(entorno, ejecucion_id)
         try:
             resultado = pedir_estructurado(
-                ctx, "evaluar_viabilidad", sistema=prompts.ANALIZAR_IMPACTO_Y_VIABILIDAD,
+                ctx, "evaluar_viabilidad", sistema=_con_estrategia(prompts.ANALIZAR_IMPACTO_Y_VIABILIDAD, ctx.estrategia, instrucciones=True),
                 mensajes=estado["mensajes"], nombre_tool="veredicto_viabilidad",
                 descripcion_tool="Entrega el veredicto de viabilidad",
                 json_schema={
@@ -386,7 +399,7 @@ def construir_grafo(entorno: Entorno):
         archivos_descubiertos = estado.get("archivos_relevantes", [])
         try:
             resultado = pedir_estructurado(
-                ctx, "proponer_plan", sistema=prompts.PROPONER_PLAN,
+                ctx, "proponer_plan", sistema=_con_estrategia(prompts.PROPONER_PLAN, ctx.estrategia, instrucciones=True),
                 mensajes=estado["mensajes"] + [{
                     "role": "user",
                     "content": [{"text": (
@@ -476,7 +489,9 @@ def construir_grafo(entorno: Entorno):
         ejecucion_id = estado["ejecucion_id"]
         ctx = _construir_contexto(entorno, ejecucion_id)
         operaciones = ctx.estrategia.scope_template().operaciones
-        sistema = prompts.PROPONER_CORRECCION if es_correccion else prompts.GENERAR_CAMBIOS
+        sistema = _con_estrategia(
+            prompts.PROPONER_CORRECCION if es_correccion else prompts.GENERAR_CAMBIOS, ctx.estrategia, instrucciones=True
+        )
         mensajes = list(estado["mensajes"])
         if mensaje_extra:
             mensajes.append({"role": "user", "content": [{"text": mensaje_extra}]})

@@ -124,7 +124,7 @@ def test_ejecucion_inexistente_da_404_con_formato_uniforme(tmp_path, workspace):
     assert r.status_code == 404
     detalle = r.json()["detail"]
     assert detalle["codigo"] == "NO_ENCONTRADO"
-    assert detalle["run_id"] == 9999
+    assert detalle["ejecucion_id"] == 9999
 
 
 def test_endpoint_traza_devuelve_tramos_y_resumen_sin_contenido(tmp_path):
@@ -153,5 +153,62 @@ def test_endpoint_traza_devuelve_tramos_y_resumen_sin_contenido(tmp_path):
         assert cuerpo["resumen"]["tokens_entrada"] == 1000
         assert cuerpo["resumen"]["errores"] == 1
         assert cliente.get("/ejecuciones/99999/traza").status_code == 404
+    finally:
+        app_.cerrar()
+
+
+def test_openapi_documenta_todos_los_endpoints_y_un_unico_formato_de_error(tmp_path):
+    """NFR-021: el 100 % de los endpoints tiene esquema de respuesta y los errores
+    (incluida la validación de entrada) usan un único formato dentro de `detail`."""
+    from fastapi.testclient import TestClient
+
+    from emh.api.app import crear_app
+    from emh.bootstrap import Aplicacion
+
+    app_ = Aplicacion(data_dir=tmp_path, modo_simulado=True)
+    try:
+        api = crear_app(app_)
+        for ruta, operaciones in api.openapi()["paths"].items():
+            for metodo, op in operaciones.items():
+                ok = next(c for c in op["responses"] if c.startswith("2"))
+                esquema = op["responses"][ok]["content"]["application/json"]["schema"]
+                assert esquema, f"{metodo.upper()} {ruta} sin esquema de respuesta"
+                assert op.get("summary"), f"{metodo.upper()} {ruta} sin resumen"
+
+        cliente = TestClient(api)
+        invalida = cliente.post("/solicitudes", json={"objetivo": "x"})
+        assert invalida.status_code == 422
+        detalle = invalida.json()["detail"]
+        assert set(detalle) == {"codigo", "mensaje", "ejecucion_id", "campos"}
+        assert detalle["codigo"] == "SOLICITUD_INVALIDA" and "repositorio_url" in detalle["campos"]
+
+        aprobacion = cliente.post("/ejecuciones/1/aprobacion", json={"plan_id": 1, "plan_hash": "h", "decision": "TAL_VEZ", "aprobador": "dev:x"})
+        assert aprobacion.status_code == 422  # la decisión solo admite APROBADO o RECHAZADO
+        assert cliente.get("/ejecuciones/424242").json()["detail"]["codigo"] == "NO_ENCONTRADO"
+    finally:
+        app_.cerrar()
+
+
+def test_solicitud_cuyo_objetivo_la_estrategia_no_cubre_se_rechaza_con_el_motivo(tmp_path):
+    """FR-002: no basta con que la estrategia exista; `supports()` decide si cubre ESTE objetivo."""
+    from fastapi.testclient import TestClient
+
+    from emh.api.app import crear_app
+    from emh.bootstrap import Aplicacion
+
+    app_ = Aplicacion(data_dir=tmp_path, modo_simulado=True)
+    try:
+        cliente = TestClient(crear_app(app_))
+        cuerpo = {
+            "repositorio_url": "https://github.com/example/x", "commit_referencia": "a1b2c3d",
+            "estrategia_id": "python_dependency_upgrade", "objetivo": "Actualizar algo",
+            "version_esperada": "esto no es una version", "limite_tiempo_segundos": 60,
+            "limite_iteraciones": 1, "limite_costo_usd": 1.0, "solicitante": "dev:x",
+        }
+        r = cliente.post("/solicitudes", json=cuerpo)
+        assert r.status_code == 422
+        assert r.json()["detail"]["codigo"] == "ESTRATEGIA_NO_SOPORTADA"
+        assert "versión" in r.json()["detail"]["mensaje"]
+        assert app_.repo.obtener_ejecucion(1) is None  # no se registró nada
     finally:
         app_.cerrar()

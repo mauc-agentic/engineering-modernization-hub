@@ -22,9 +22,11 @@ class ScriptedModel:
         self._respuestas = list(respuestas)
         self._indice = 0
         self.mensajes_recibidos: list[list[dict]] = []
+        self.sistemas_recibidos: list[str | None] = []
 
     def completar(self, *, mensajes, sistema=None, herramientas=None, nivel_esfuerzo="low") -> RespuestaModelo:
         self.mensajes_recibidos.append(mensajes)
+        self.sistemas_recibidos.append(sistema)
         if self._indice >= len(self._respuestas):
             raise IndexError(
                 f"ScriptedModel (SIMULATED) agotó su guion en la llamada {self._indice + 1}: "

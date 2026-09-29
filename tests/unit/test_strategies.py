@@ -28,10 +28,23 @@ def test_official_sources_incluye_pypi():
     assert dominios == {"pypi.org", "github.com"}  # exactamente estas fuentes, no más
 
 
-def test_scope_template_solo_autoriza_modificar():
+def test_scope_template_autoriza_modificar_y_crear_pero_nunca_borrar():
+    """FR-014: se pueden adaptar pruebas existentes (modificar) y añadir una nueva (crear), solo en
+    rutas que el plan declare; borrar nunca está autorizado."""
+    plantilla = PythonDependencyUpgradeStrategy().scope_template()
+    assert plantilla.operaciones == ["modificar", "crear"]
+    assert "borrar" not in plantilla.operaciones
+
+
+def test_supports_admite_versiones_fijas_y_rangos_y_rechaza_basura():
+    from tests.factories import solicitud
+
     s = PythonDependencyUpgradeStrategy()
-    plantilla = s.scope_template()
-    assert plantilla.operaciones == ["modificar"]
+    for valida in ("PyYAML==6.0.2", "Flask>=3.0,<3.1", "Django~=4.2", "requests"):
+        assert s.supports(solicitud(version_esperada=valida)).aplica, valida
+    for invalida in ("", "dos palabras", "==", "Flask>=3.0,"):
+        soporte = s.supports(solicitud(version_esperada=invalida))
+        assert not soporte.aplica and soporte.motivo, invalida
 
 
 def test_command_profile_usa_wheelhouse_sin_red_en_contenedor():

@@ -164,6 +164,13 @@ def test_flujo_completo_exito_con_correccion(repo, workspace):
     assert final.resultado is ResultadoEjecucion.LISTO_PARA_REVISION
     assert final.iteraciones_usadas == 1  # un ciclo de corrección (límite era 3)
 
+    # La estrategia DECLARA y el agente USA (06-estrategias.md): sus señales de descubrimiento y sus
+    # instrucciones llegan al modelo en los prompts de sistema de las fases correspondientes.
+    sistemas = " || ".join(s or "" for s in modelo.sistemas_recibidos)
+    assert "requirements.txt, pyproject.toml, *.lock" in sistemas
+    assert "Instrucciones específicas de la estrategia activa" in sistemas
+    assert "nunca actualices transitivamente" in sistemas.lower()
+
     # Observabilidad: cada nodo, llamada al modelo y herramienta deja su tramo con
     # duración real y sin contenido (NFR-014).
     trazas = repo.listar_trazas(e.id)

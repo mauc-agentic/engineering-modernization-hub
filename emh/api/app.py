@@ -5,21 +5,36 @@ negocio (DOCS/03-arquitectura.md §3.6). La ejecución corre en segundo plano
 from __future__ import annotations
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from emh.api.schemas import (
+    AnalisisViabilidadRespuesta,
     AprobacionEntrada,
+    AprobacionRespuesta,
+    EjecucionRespuesta,
+    ErrorHTTP,
     ErrorRespuesta,
+    EventoSeguridadRespuesta,
+    PlanRespuesta,
+    ReporteRespuesta,
     SolicitudEntrada,
     SolicitudRespuesta,
+    TrazaRespuesta,
+    VerificacionRespuesta,
 )
 from emh.bootstrap import Aplicacion
 from emh.core.models import DecisionAprobacion, Ejecucion, Solicitud
 from emh.strategies.registry import obtener_estrategia
 
 
-def _error(codigo: str, mensaje: str, run_id: int | None = None) -> dict:
-    return ErrorRespuesta(codigo=codigo, mensaje=mensaje, run_id=run_id).model_dump()
+def _error(codigo: str, mensaje: str, ejecucion_id: int | None = None) -> dict:
+    return ErrorRespuesta(codigo=codigo, mensaje=mensaje, ejecucion_id=ejecucion_id).model_dump()
+
+
+# Errores que un endpoint puede devolver, documentados en OpenAPI con el formato único (NFR-021).
+_NO_ENCONTRADO = {404: {"model": ErrorHTTP, "description": "La ejecución no existe (o aún no tiene ese dato)."}}
 
 
 def crear_app(aplicacion: Aplicacion) -> FastAPI:
@@ -34,18 +49,37 @@ def crear_app(aplicacion: Aplicacion) -> FastAPI:
     )
     app.state.aplicacion = aplicacion
 
-    @app.post("/solicitudes", response_model=SolicitudRespuesta, status_code=201)
+    @app.exception_handler(RequestValidationError)
+    async def _validacion(_peticion, exc: RequestValidationError):
+        """Los errores de validación de FastAPI usan el MISMO formato que el resto (NFR-021)."""
+        campos = sorted({".".join(str(x) for x in e["loc"] if x != "body") for e in exc.errors()})
+        cuerpo = ErrorRespuesta(codigo="SOLICITUD_INVALIDA", mensaje="La petición no cumple el contrato de la API", campos=campos)
+        return JSONResponse(status_code=422, content={"detail": cuerpo.model_dump()})
+
+    @app.post(
+        "/solicitudes", response_model=SolicitudRespuesta, status_code=201, tags=["Solicitud"],
+        summary="Registrar una solicitud de modernización (UC-001)",
+        responses={422: {"model": ErrorHTTP, "description": "Estrategia no soportada o petición inválida."}},
+    )
     def registrar_solicitud(entrada: SolicitudEntrada, background: BackgroundTasks):
         # FR-002: validar que la estrategia exista antes de registrar (UC-001 A2)
-        if obtener_estrategia(entrada.estrategia_id) is None:
+        estrategia = obtener_estrategia(entrada.estrategia_id)
+        if estrategia is None:
             raise HTTPException(422, detail=_error("ESTRATEGIA_NO_SOPORTADA", f"'{entrada.estrategia_id}' no está registrada"))
+        candidata = Solicitud(**entrada.model_dump())
+        soporte = estrategia.supports(candidata)
+        if not soporte.aplica:  # la estrategia existe pero no cubre ESTE objetivo (FR-002)
+            raise HTTPException(422, detail=_error("ESTRATEGIA_NO_SOPORTADA", soporte.motivo or "la estrategia no cubre el objetivo"))
 
-        solicitud = aplicacion.repo.guardar_solicitud(Solicitud(**entrada.model_dump()))
+        solicitud = aplicacion.repo.guardar_solicitud(candidata)
         ejecucion = aplicacion.repo.guardar_ejecucion(Ejecucion(solicitud_id=solicitud.id))
         background.add_task(aplicacion.runner.run, ejecucion.id)
         return SolicitudRespuesta(ejecucion_id=ejecucion.id, estado=ejecucion.estado.value)
 
-    @app.get("/ejecuciones/{ejecucion_id}")
+    @app.get(
+        "/ejecuciones/{ejecucion_id}", response_model=EjecucionRespuesta, responses=_NO_ENCONTRADO,
+        tags=["Ejecución"], summary="Estado y presupuesto consumido de una ejecución",
+    )
     def obtener_ejecucion(ejecucion_id: int):
         e = aplicacion.repo.obtener_ejecucion(ejecucion_id)
         if e is None:
@@ -57,7 +91,10 @@ def crear_app(aplicacion: Aplicacion) -> FastAPI:
             "iteraciones_usadas": e.iteraciones_usadas, "costo_estimado_usd": e.costo_estimado_usd,
         }
 
-    @app.get("/ejecuciones/{ejecucion_id}/analisis-viabilidad")
+    @app.get(
+        "/ejecuciones/{ejecucion_id}/analisis-viabilidad", response_model=AnalisisViabilidadRespuesta,
+        responses=_NO_ENCONTRADO, tags=["Ejecución"], summary="Veredicto de viabilidad y su evidencia (UC-002)",
+    )
     def obtener_analisis(ejecucion_id: int):
         analisis = aplicacion.repo.obtener_analisis_viabilidad(ejecucion_id)
         if analisis is None:
@@ -67,7 +104,10 @@ def crear_app(aplicacion: Aplicacion) -> FastAPI:
             "evidencia": analisis.evidencia,
         }
 
-    @app.get("/ejecuciones/{ejecucion_id}/plan")
+    @app.get(
+        "/ejecuciones/{ejecucion_id}/plan", response_model=PlanRespuesta, responses=_NO_ENCONTRADO,
+        tags=["Ejecución"], summary="Plan vigente, con su hash (UC-003)",
+    )
     def obtener_plan(ejecucion_id: int):
         plan = aplicacion.repo.obtener_plan_vigente(ejecucion_id)
         if plan is None:
@@ -78,7 +118,11 @@ def crear_app(aplicacion: Aplicacion) -> FastAPI:
             "comandos_verificacion": plan.comandos_verificacion, "riesgos": plan.riesgos,
         }
 
-    @app.post("/ejecuciones/{ejecucion_id}/aprobacion", status_code=202)
+    @app.post(
+        "/ejecuciones/{ejecucion_id}/aprobacion", response_model=AprobacionRespuesta, status_code=202,
+        responses={**_NO_ENCONTRADO, 409: {"model": ErrorHTTP, "description": "El plan indicado ya no es el vigente."}},
+        tags=["Ejecución"], summary="Aprobar o rechazar el plan, ligado a su hash (UC-003)",
+    )
     def aprobar_o_rechazar(ejecucion_id: int, entrada: AprobacionEntrada, background: BackgroundTasks):
         ejecucion = aplicacion.repo.obtener_ejecucion(ejecucion_id)
         if ejecucion is None:
@@ -94,7 +138,10 @@ def crear_app(aplicacion: Aplicacion) -> FastAPI:
         background.add_task(aplicacion.runner.resume, ejecucion_id)
         return {"ejecucion_id": ejecucion_id, "decision_registrada": entrada.decision}
 
-    @app.get("/ejecuciones/{ejecucion_id}/verificaciones")
+    @app.get(
+        "/ejecuciones/{ejecucion_id}/verificaciones", response_model=list[VerificacionRespuesta],
+        tags=["Ejecución"], summary="Verificaciones ejecutadas, con su salida real capturada (UC-004)",
+    )
     def listar_verificaciones(ejecucion_id: int):
         return [
             {
@@ -105,7 +152,10 @@ def crear_app(aplicacion: Aplicacion) -> FastAPI:
             for v in aplicacion.repo.listar_verificaciones(ejecucion_id)
         ]
 
-    @app.get("/ejecuciones/{ejecucion_id}/eventos")
+    @app.get(
+        "/ejecuciones/{ejecucion_id}/eventos", response_model=list[EventoSeguridadRespuesta],
+        tags=["Ejecución"], summary="Eventos de seguridad de la ejecución (UC-005)",
+    )
     def listar_eventos(ejecucion_id: int):
         return [
             {
@@ -115,7 +165,10 @@ def crear_app(aplicacion: Aplicacion) -> FastAPI:
             for ev in aplicacion.repo.listar_eventos_seguridad(ejecucion_id)
         ]
 
-    @app.get("/ejecuciones/{ejecucion_id}/traza")
+    @app.get(
+        "/ejecuciones/{ejecucion_id}/traza", response_model=TrazaRespuesta, responses=_NO_ENCONTRADO,
+        tags=["Observabilidad"], summary="Traza de la ejecución: nodos, modelo y herramientas (NFR-014)",
+    )
     def obtener_traza(ejecucion_id: int):
         """Observabilidad de la ejecución: cada nodo, llamada al modelo y herramienta
         con su duración real, tokens y resultado. Sin contenido de prompts ni archivos."""
@@ -144,7 +197,10 @@ def crear_app(aplicacion: Aplicacion) -> FastAPI:
             },
         }
 
-    @app.get("/ejecuciones/{ejecucion_id}/reporte")
+    @app.get(
+        "/ejecuciones/{ejecucion_id}/reporte", response_model=ReporteRespuesta, responses=_NO_ENCONTRADO,
+        tags=["Ejecución"], summary="Reporte final: hechos deterministas + narrativa (UC-005)",
+    )
     def obtener_reporte(ejecucion_id: int):
         try:
             return aplicacion.reporte.render(ejecucion_id)

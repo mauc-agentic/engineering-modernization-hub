@@ -195,6 +195,8 @@ terraform output -raw contrasena_web            # autenticación HTTP básica ge
 export EMH_API=$(../scripts/nube-url.sh)        # alternativa: IP directa de la tarea (solo tu IP)
 ../scripts/02-enviar.sh 1                       # y el resto del kit de demo, igual que en local
 
+../scripts/nube-db.sh "select id, estado, resultado from ejecucion order by id desc limit 5"   # consulta de SOLO LECTURA a RDS
+
 terraform destroy                               # IMPORTANTE al terminar: RDS y Fargate cobran por hora
 ```
 

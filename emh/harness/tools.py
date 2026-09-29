@@ -210,12 +210,9 @@ def _registrar_fuente(ctx: ContextoHerramientas, dominio: str, url: str, conteni
 
 def search_docs(ctx: ContextoHerramientas, args: ArgsSearchDocs) -> ResultadoHerramienta:
     dominio = _dominio_pelado(args.dominio)
-    if not any(dominio == dp or dominio.endswith("." + dp) for dp in ctx.dominios_fuente_permitidos):
-        return _denegar(
-            ctx, "control_02_comandos_permitidos",
-            f"dominio '{args.dominio}' no está en las fuentes oficiales de la estrategia",
-            OrigenEvento.MODELO,
-        )
+    d = ctx.gate.verificar_dominio_fuente(dominio, ctx.dominios_fuente_permitidos)
+    if not d.permitido:
+        return _denegar(ctx, d.regla, f"dominio '{args.dominio}' no está en las fuentes oficiales de la estrategia", OrigenEvento.MODELO)
 
     url = f"https://{dominio}/{args.consulta.lstrip('/')}"
     try:

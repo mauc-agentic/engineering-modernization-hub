@@ -116,6 +116,16 @@ class PolicyGate:
             "el comando no coincide con el perfil de la estrategia activa",
         )
 
+    def verificar_dominio_fuente(self, dominio: str, permitidos: list[str]) -> Decision:
+        """Dominios de las fuentes oficiales que la estrategia declara (`search_docs`). Se agrupa con
+        el control 2 (qué puede salir a la red) y conserva el nombre de regla de los eventos históricos."""
+        if any(dominio == dp or dominio.endswith("." + dp) for dp in permitidos):
+            return Decision(True, "control_02_comandos_permitidos", "dominio de fuente oficial declarada")
+        return Decision(
+            False, "control_02_comandos_permitidos",
+            f"dominio '{dominio}' no está en las fuentes oficiales de la estrategia",
+        )
+
     # -- Control 3: Rutas modificables (confinamiento simple, lecturas) -----
 
     def verificar_confinamiento(self, ruta: str, workspace_root: Path) -> Decision:

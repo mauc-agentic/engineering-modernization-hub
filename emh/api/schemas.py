@@ -26,6 +26,9 @@ class SolicitudRespuesta(BaseModel):
 
 
 class AprobacionEntrada(BaseModel):
+    """SIMULATED: `aprobador` es una identidad DECLARADA por quien llama, sin autenticación (RN-14).
+    Se registra tal cual en la decisión; la identidad verificada llega con SSO en la Fase 2 (FR-039)."""
+
     plan_id: int
     plan_hash: str = Field(max_length=64)
     decision: Literal["APROBADO", "RECHAZADO"]

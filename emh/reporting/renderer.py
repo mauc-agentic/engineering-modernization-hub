@@ -61,7 +61,7 @@ class ReportRenderer:
                 "motivo_bloqueo": ejecucion.motivo_bloqueo.value if ejecucion.motivo_bloqueo else None,
                 "tokens_entrada": sum(c.tokens_entrada for c in llamadas),
                 "tokens_salida": sum(c.tokens_salida for c in llamadas),
-                "costo_estimado_usd": ejecucion.costo_estimado_usd,
+                "costo_estimado_usd": round(ejecucion.costo_estimado_usd, 4),  # NFR-010: 4 decimales de dólar
                 "iteraciones_usadas": ejecucion.iteraciones_usadas,
                 "iniciado_en": ejecucion.iniciado_en.isoformat(),
                 "finalizado_en": ejecucion.finalizado_en.isoformat() if ejecucion.finalizado_en else None,

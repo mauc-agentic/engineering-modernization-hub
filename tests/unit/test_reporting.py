@@ -90,3 +90,18 @@ def test_decision_sin_cita_se_marca_sin_fuentes(repo):
     assert reporte["decisiones_tecnicas"][0]["sustentada"] is False
     assert reporte["decisiones_tecnicas"][0]["fuentes"] == []
     assert reporte["cambios"] == []  # BLOQUEADO: nunca se presenta un cambio como aplicado
+
+
+def test_el_reporte_muestra_el_costo_con_cuatro_decimales(tmp_path):
+    """NFR-010."""
+    from emh.persistence.sqlite_repo import SqliteRunRepository
+    from emh.reporting.renderer import ReportRenderer
+    from tests.factories import ejecucion, solicitud
+
+    repo = SqliteRunRepository(tmp_path / "t.db")
+    try:
+        s = repo.guardar_solicitud(solicitud())
+        e = repo.guardar_ejecucion(ejecucion(solicitud_id=s.id, costo_estimado_usd=0.0190326))
+        assert ReportRenderer(repo).render(e.id)["ejecucion"]["costo_estimado_usd"] == 0.019
+    finally:
+        repo.close()
